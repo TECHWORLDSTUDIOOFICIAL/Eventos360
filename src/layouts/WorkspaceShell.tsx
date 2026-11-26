@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, Navigate, Outlet, useLocation, useOutletContext, useParams } from "react-router";
 import { ChevronsUpDown, CreditCard, LogOut, Menu, Settings, ShieldCheck, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { useMyWorkspaces, usePlatformSettings, useWorkspaceModules, whatsappLink } from "@/lib/queries";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { unwrap, useMyWorkspaces, usePlatformSettings, useWorkspaceModules, whatsappLink } from "@/lib/queries";
 import { MODALITIES, workspacePath } from "@/lib/modalities";
 import { moduleMeta } from "@/lib/modules";
 import { daysUntil, formatDate } from "@/lib/format";
@@ -11,8 +13,11 @@ import { Logo } from "@/components/Logo";
 import { Alert, FullPageSpinner, cx } from "@/components/ui";
 import NotFound from "@/pages/NotFound";
 
+export interface WorkspaceRegion { timezone: string; locale: string; currency_code: string; tax_rate: number }
+
 export interface WorkspaceContext {
   ws: MyWorkspace;
+  region: WorkspaceRegion;
   modules: WorkspaceModule[];
   canManage: boolean;      // propietario o administrador
   readOnly: boolean;       // suscripción suspendida/cancelada
@@ -27,6 +32,11 @@ export default function WorkspaceShell({ kind }: { kind: WorkspaceKind }) {
   const { data: workspaces, isLoading } = useMyWorkspaces();
   const { data: modules, isLoading: loadingModules } = useWorkspaceModules(wsId);
   const { data: settings } = usePlatformSettings();
+  const { data: region, isLoading: loadingRegion } = useQuery({
+    queryKey: ["ws-region", wsId],
+    enabled: !!wsId,
+    queryFn: async () => unwrap<WorkspaceRegion>(await supabase.from("workspaces").select("timezone, locale, currency_code, tax_rate").eq("id", wsId).single()),
+  });
   const [drawer, setDrawer] = useState(false);
 
   useEffect(() => setDrawer(false), [location.pathname]);
@@ -36,7 +46,7 @@ export default function WorkspaceShell({ kind }: { kind: WorkspaceKind }) {
   if (!ws || ws.is_disabled) return <NotFound />;
   // Cada modalidad tiene su propio prefijo de rutas: corrige si se accede por otro.
   if (ws.kind !== kind) return <Navigate to={workspacePath(ws.kind, ws.id)} replace />;
-  if (loadingModules) return <FullPageSpinner />;
+  if (loadingModules || loadingRegion) return <FullPageSpinner />;
 
   const meta = MODALITIES[kind];
   const status = ws.subscription_status;
@@ -130,7 +140,7 @@ export default function WorkspaceShell({ kind }: { kind: WorkspaceKind }) {
           </div>
         )}
         <main className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
-          <Outlet context={{ ws, modules: modules ?? [], canManage, readOnly } satisfies WorkspaceContext} />
+          <Outlet context={{ ws, region: region ?? { timezone: "America/Managua", locale: "es-NI", currency_code: "NIO", tax_rate: 15 }, modules: modules ?? [], canManage, readOnly } satisfies WorkspaceContext} />
         </main>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { moduleMeta } from "@/lib/modules";
 import { daysUntil, formatDate } from "@/lib/format";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { Alert, Badge, Card, CardHeader, PageHeader, Stat } from "@/components/ui";
+import PersonalHome from "@/pages/personal/PersonalHome";
 
 const INTRO = {
   personal: "Este es el centro de tu celebración. Aquí verás la cuenta regresiva, tu presupuesto, tus invitados y lo que falta por hacer.",
@@ -18,6 +19,12 @@ const INTRO = {
  * Los indicadores de negocio llegan con cada módulo; no se muestran cifras ficticias.
  */
 export default function WorkspaceHome() {
+  const { ws } = useWorkspace();
+  if (ws.kind === "personal") return <PersonalHome />;
+  return <GenericHome />;
+}
+
+function GenericHome() {
   const { ws, modules } = useWorkspace();
   const { profile } = useAuth();
   const meta = MODALITIES[ws.kind];
@@ -49,7 +56,7 @@ export default function WorkspaceHome() {
         <CardHeader title="Tus herramientas" description="Estos son los módulos de tu espacio según tu modalidad, especialidad y plan." />
         <ul className="grid gap-px bg-line sm:grid-cols-2 lg:grid-cols-3">
           {pending.map((m) => {
-            const info = moduleMeta(m.module_key);
+            const info = moduleMeta(m.module_key, ws.kind);
             const Icon = info.icon;
             return (
               <li key={m.module_key} className="bg-card">

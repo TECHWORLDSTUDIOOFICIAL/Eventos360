@@ -8,6 +8,7 @@ import Register from "./pages/Register";
 import ChangePassword from "./pages/ChangePassword";
 import Workspaces from "./pages/Workspaces";
 import NotFound from "./pages/NotFound";
+const PublicInvitation = lazy(() => import("./pages/PublicInvitation"));
 import WorkspaceShell from "./layouts/WorkspaceShell";
 import WorkspaceHome from "./pages/workspace/WorkspaceHome";
 import ModulePage from "./pages/workspace/ModulePage";
@@ -75,6 +76,7 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/acceso" element={<Login />} />
       <Route path="/registro" element={<Register />} />
+      <Route path="/i/:token" element={<Suspense fallback={<FullPageSpinner />}><PublicInvitation /></Suspense>} />
 
       <Route element={<RequireAuth />}>
         <Route path="/cambiar-clave" element={<ChangePassword />} />

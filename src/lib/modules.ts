@@ -22,9 +22,9 @@ const m = (icon: LucideIcon, description: string, stage: number | null): ModuleM
 export const MODULES: Record<string, ModuleMeta> = {
   // Personal
   home: m(Home, "Resumen de tu evento: cuenta regresiva, presupuesto, invitados y tareas.", null),
-  my_event: m(PartyPopper, "Datos del evento: categoría, fecha, lugar, presupuesto y fotos de referencia.", 2),
-  guests: m(Users, "Lista de invitados, grupos familiares, acompañantes y confirmaciones.", 2),
-  invitations: m(Mail, "Invitaciones digitales con enlace, QR y confirmación de asistencia.", 2),
+  my_event: m(PartyPopper, "Datos del evento: categoría, fecha, lugar, presupuesto y fotos de referencia.", null),
+  guests: m(Users, "Lista de invitados, grupos familiares, acompañantes y confirmaciones.", null),
+  invitations: m(Mail, "Invitaciones digitales con enlace, QR y confirmación de asistencia.", null),
   budget: m(Wallet, "Presupuesto por categorías, gastos, anticipos y pagos pendientes.", 2),
   seating: m(Armchair, "Mesas, capacidad y asignación de invitados.", 2),
   schedule: m(Clock, "Cronograma del día: horarios, actividades y responsables.", 2),
@@ -68,6 +68,15 @@ export const SPECIALTY_ICONS: Record<string, LucideIcon> = {
   sound_lighting: BarChart3, florist: Heart, attire: Tag, staffing: Users, full_service: CalendarRange,
 };
 
-export function moduleMeta(key: string): ModuleMeta {
-  return MODULES[key] ?? m(Package, "", 9);
+/** Módulos ya implementados por modalidad (el resto indica su etapa). */
+const IMPLEMENTED: Record<string, string[]> = {
+  personal: ["home", "my_event", "guests", "invitations", "budget", "suppliers", "seating", "schedule", "tasks", "inspiration"],
+};
+
+export function moduleMeta(key: string, kind?: string): ModuleMeta {
+  const base = MODULES[key] ?? m(Package, "", 9);
+  if (kind && IMPLEMENTED[kind]?.includes(key)) return { ...base, stage: null };
+  // En Profesional/Business los módulos de eventos se construyen en la etapa 3.
+  if (kind && kind !== "personal" && key !== "dashboard" && (base.stage === null || base.stage <= 2)) return { ...base, stage: 3 };
+  return base;
 }

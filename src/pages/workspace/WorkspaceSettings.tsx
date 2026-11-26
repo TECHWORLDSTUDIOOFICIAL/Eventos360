@@ -49,6 +49,7 @@ export default function WorkspaceSettings() {
     setMsg({ tone: "ok", text: "Cambios guardados." });
     await qc.invalidateQueries({ queryKey: ["my-workspaces"] });
     await qc.invalidateQueries({ queryKey: ["ws-row", ws.id] });
+    await qc.invalidateQueries({ queryKey: ["ws-region", ws.id] });
   }
 
   return (
