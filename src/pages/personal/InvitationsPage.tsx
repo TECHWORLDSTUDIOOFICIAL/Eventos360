@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Download, ExternalLink, Eye, EyeOff, MessageCircle, QrCode } from "lucide-react";
+import { Link } from "react-router";
+import { Copy, Download, ExternalLink, Eye, EyeOff, MessageCircle, Printer, QrCode } from "lucide-react";
+import { workspacePath } from "@/lib/modalities";
 import { supabase } from "@/lib/supabase";
 import { unwrap } from "@/lib/queries";
 import { guestName, invitationUrl, publicMediaUrl, useGuests, type EventRow } from "@/lib/events";
@@ -71,6 +73,7 @@ function Invitations({ event, events, select }: { event: EventRow; events: Event
         actions={<>
           <EventSwitcher events={events} current={event} onSelect={select} />
           {published ? <Badge tone="ok" className="h-8 px-3">Publicada</Badge> : <Badge tone="neutral" className="h-8 px-3">Borrador</Badge>}
+          <Link to={workspacePath(ws.kind, ws.id, "imprimir/invitaciones")}><Button variant="secondary" icon={<Printer className="size-4" />}>Imprimir invitaciones</Button></Link>
         </>} />
       {msg && <div className="mb-4"><Alert tone={msg.tone} onClose={() => setMsg(null)}>{msg.text}</Alert></div>}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">

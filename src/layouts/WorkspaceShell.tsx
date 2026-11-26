@@ -107,11 +107,11 @@ export default function WorkspaceShell({ kind }: { kind: WorkspaceKind }) {
   );
 
   return (
-    <div data-mode={kind} className="min-h-dvh bg-paper lg:grid lg:grid-cols-[272px_1fr]">
-      <aside className="sticky top-0 hidden h-dvh border-r border-line bg-card lg:block">{nav}</aside>
+    <div data-mode={kind} className="min-h-dvh bg-paper lg:grid lg:grid-cols-[272px_1fr] print:block print:min-h-0 print:bg-white">
+      <aside className="sticky top-0 hidden h-dvh border-r border-line bg-card lg:block print:hidden">{nav}</aside>
 
       {/* Barra superior móvil */}
-      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-card/95 px-4 py-3 backdrop-blur lg:hidden">
+      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-card/95 px-4 py-3 backdrop-blur lg:hidden print:hidden">
         <Link to={base}><Logo suffix={meta.short} /></Link>
         <button onClick={() => setDrawer(true)} className="rounded-lg p-2 hover:bg-ink/5" aria-label="Abrir menú"><Menu className="size-5" /></button>
       </div>
@@ -127,7 +127,7 @@ export default function WorkspaceShell({ kind }: { kind: WorkspaceKind }) {
 
       <div className="min-w-0">
         {(status === "past_due" || readOnly || (left !== null && left <= 7 && left >= 0)) && (
-          <div className="px-4 pt-4 sm:px-8">
+          <div className="px-4 pt-4 sm:px-8 print:hidden">
             <Alert
               tone={readOnly ? "danger" : "warn"}
               title={readOnly ? "Tu suscripción está suspendida: el espacio está en modo solo lectura." :
@@ -139,7 +139,7 @@ export default function WorkspaceShell({ kind }: { kind: WorkspaceKind }) {
             </Alert>
           </div>
         )}
-        <main className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
+        <main className="mx-auto max-w-6xl px-4 py-8 sm:px-8 print:max-w-none print:p-0">
           <Outlet context={{ ws, region: region ?? { timezone: "America/Managua", locale: "es-NI", currency_code: "NIO", tax_rate: 15 }, modules: modules ?? [], canManage, readOnly } satisfies WorkspaceContext} />
         </main>
       </div>

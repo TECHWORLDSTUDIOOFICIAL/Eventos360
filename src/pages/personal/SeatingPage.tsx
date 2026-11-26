@@ -1,5 +1,8 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { Armchair, Pencil, Plus, Trash2 } from "lucide-react";
+import { Link } from "react-router";
+import { Armchair, List, Map as MapIcon, Pencil, Plus, Printer, Trash2 } from "lucide-react";
+import { workspacePath } from "@/lib/modalities";
+import SeatingMapView from "./SeatingMapView";
 import { supabase } from "@/lib/supabase";
 import { guestName, guestSeats, useEventTables, useGuests, useInvalidateEvent, type EventRow, type EventTable, type GuestRow } from "@/lib/events";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
@@ -13,7 +16,9 @@ export default function SeatingPage() {
 }
 
 function Seating({ event, events, select }: { event: EventRow; events: EventRow[]; select: (id: string) => void }) {
-  const { readOnly } = useWorkspace();
+  const { ws, readOnly } = useWorkspace();
+  const [view, setView] = useState<"list" | "map">(() => { try { return (localStorage.getItem("e360:seating-view") as "list" | "map") || "list"; } catch { return "list"; } });
+  const changeView = (v: "list" | "map") => { setView(v); try { localStorage.setItem("e360:seating-view", v); } catch { /* opcional */ } };
   const { data: tables, isLoading } = useEventTables(event.id);
   const { data: guests } = useGuests(event.id);
   const invalidate = useInvalidateEvent();
@@ -44,6 +49,15 @@ function Seating({ event, events, select }: { event: EventRow; events: EventRow[
       <PageHeader title="Distribución de mesas" description={`${seated} de ${needed} personas ubicadas · ${totalSeats} lugares en ${tables?.length ?? 0} mesa(s)`}
         actions={<>
           <EventSwitcher events={events} current={event} onSelect={select} />
+          <div className="inline-flex rounded-xl border border-line bg-card p-1" role="tablist" aria-label="Vista">
+            {([["list", "Lista", List], ["map", "Mapa", MapIcon]] as const).map(([v, l, I]) => (
+              <button key={v} role="tab" aria-selected={view === v} onClick={() => changeView(v)}
+                className={cx("inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold", view === v ? "bg-ink text-paper" : "text-ink-soft hover:bg-ink/5")}>
+                <I className="size-4" />{l}
+              </button>
+            ))}
+          </div>
+          {!!tables?.length && <Link to={workspacePath(ws.kind, ws.id, "imprimir/mesas")}><Button variant="secondary" icon={<Printer className="size-4" />}>Imprimir</Button></Link>}
           {!readOnly && <Button variant="accent" icon={<Plus className="size-4" />} onClick={() => setEditing("new")}>Agregar mesas</Button>}
         </>} />
       {needed > totalSeats && (tables?.length ?? 0) > 0 && <div className="mb-4"><Alert tone="warn">Faltan {needed - totalSeats} lugares para todas las personas invitadas.</Alert></div>}
@@ -55,6 +69,8 @@ function Seating({ event, events, select }: { event: EventRow; events: EventRow[
           action={!readOnly && <Button variant="accent" onClick={() => setEditing("new")}>Crear mesas</Button>}>
           Crea varias mesas de una vez indicando cuántas y su capacidad. Luego asigna a tus invitados.
         </EmptyState></Card>
+      ) : view === "map" ? (
+        <SeatingMapView event={event} tables={tables} byTable={byTable} onEditTable={(t) => setEditing(t)} />
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

@@ -19,7 +19,7 @@ export interface GuestRow {
 }
 
 export interface GuestGroup { id: string; name: string; event_id: string }
-export interface EventTable { id: string; name: string; capacity: number; shape: "round" | "rect"; sort: number; event_id: string }
+export interface EventTable { id: string; name: string; capacity: number; shape: "round" | "rect"; sort: number; event_id: string; pos_x: number | null; pos_y: number | null }
 
 export interface EventSummary {
   guests_total: number; guests_confirmed: number; guests_declined: number; guests_pending: number;
@@ -78,7 +78,7 @@ export const useEventTables = (eventId: string | undefined) =>
   useQuery({
     queryKey: ["event-tables", eventId],
     enabled: !!eventId,
-    queryFn: async () => unwrap<EventTable[]>(await supabase.from("event_tables").select("id, name, capacity, shape, sort, event_id").eq("event_id", eventId).order("sort").order("name")),
+    queryFn: async () => unwrap<EventTable[]>(await supabase.from("event_tables").select("id, name, capacity, shape, sort, event_id, pos_x, pos_y").eq("event_id", eventId).order("sort").order("name")),
   });
 
 /** Invalida todo lo que depende de un evento tras una escritura. */

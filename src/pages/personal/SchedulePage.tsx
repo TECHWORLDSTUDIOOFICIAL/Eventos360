@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Clock, Pencil, Plus, Trash2 } from "lucide-react";
+import { Link } from "react-router";
+import { Clock, Pencil, Plus, Printer, Trash2 } from "lucide-react";
+import { workspacePath } from "@/lib/modalities";
 import { supabase } from "@/lib/supabase";
 import { unwrap } from "@/lib/queries";
 import { useInvalidateEvent, type EventRow } from "@/lib/events";
@@ -23,7 +25,7 @@ function endTime(t: string, min: number | null) {
 }
 
 function Schedule({ event, events, select }: { event: EventRow; events: EventRow[]; select: (id: string) => void }) {
-  const { readOnly } = useWorkspace();
+  const { ws, readOnly } = useWorkspace();
   const [editing, setEditing] = useState<ScheduleItem | "new" | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["schedule", event.id],
@@ -35,6 +37,7 @@ function Schedule({ event, events, select }: { event: EventRow; events: EventRow
       <PageHeader title="Cronograma" description="El minuto a minuto del gran día: qué pasa, a qué hora y quién se encarga."
         actions={<>
           <EventSwitcher events={events} current={event} onSelect={select} />
+          {!!data?.length && <Link to={workspacePath(ws.kind, ws.id, "imprimir/cronograma")}><Button variant="secondary" icon={<Printer className="size-4" />}>Imprimir</Button></Link>}
           {!readOnly && <Button variant="accent" icon={<Plus className="size-4" />} onClick={() => setEditing("new")}>Agregar actividad</Button>}
         </>} />
       {isLoading ? <Spinner /> : !data?.length ? (

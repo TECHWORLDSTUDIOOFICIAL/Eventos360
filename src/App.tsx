@@ -14,6 +14,7 @@ import WorkspaceHome from "./pages/workspace/WorkspaceHome";
 import ModulePage from "./pages/workspace/ModulePage";
 import SubscriptionPage from "./pages/workspace/SubscriptionPage";
 import WorkspaceSettings from "./pages/workspace/WorkspaceSettings";
+const PrintPage = lazy(() => import("./pages/personal/print/PrintPage"));
 // El panel administrativo se carga bajo demanda: los clientes no descargan su código.
 // Si el archivo ya no existe (nueva versión publicada), recarga la página una vez.
 function lazyPage<T extends { default: ComponentType }>(load: () => Promise<T>) {
@@ -67,6 +68,7 @@ const workspaceRoutes = (kind: WorkspaceKind) => (
     <Route path="suscripcion" element={<SubscriptionPage />} />
     <Route path="configuracion" element={<WorkspaceSettings />} />
     <Route path="m/:moduleKey" element={<ModulePage />} />
+    <Route path="imprimir/:doc" element={<Suspense fallback={<FullPageSpinner />}><PrintPage /></Suspense>} />
   </Route>
 );
 
