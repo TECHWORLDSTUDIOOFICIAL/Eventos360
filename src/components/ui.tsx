@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useId, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { createPortal } from "react-dom";
 import { AlertCircle, CheckCircle2, Info, Loader2, X } from "lucide-react";
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
@@ -214,8 +215,10 @@ export function Dialog({ open, onClose, title, children, footer, wide }: { open:
     };
   }, [open, onClose]);
   if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+  // Portal: un ancestro con transform/animación no debe "atrapar" al diálogo fijo.
+  const mode = typeof document !== "undefined" ? document.querySelector("[data-mode]")?.getAttribute("data-mode") ?? undefined : undefined;
+  return createPortal(
+    <div data-mode={mode} className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div role="dialog" aria-modal="true" className={cx("animate-rise flex max-h-[92dvh] w-full flex-col rounded-t-2xl bg-card shadow-[var(--shadow-pop)] sm:rounded-2xl", wide ? "sm:max-w-2xl" : "sm:max-w-lg")}>
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
           <h2 className="text-base font-semibold">{title}</h2>
@@ -226,7 +229,8 @@ export function Dialog({ open, onClose, title, children, footer, wide }: { open:
         <div className="overflow-y-auto px-5 py-5">{children}</div>
         {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-line px-5 py-3">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
