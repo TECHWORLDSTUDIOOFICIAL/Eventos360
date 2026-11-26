@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ComponentType } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router";
 import { useAuth } from "./lib/auth";
 import { FullPageSpinner } from "./components/ui";
@@ -14,15 +14,30 @@ import ModulePage from "./pages/workspace/ModulePage";
 import SubscriptionPage from "./pages/workspace/SubscriptionPage";
 import WorkspaceSettings from "./pages/workspace/WorkspaceSettings";
 // El panel administrativo se carga bajo demanda: los clientes no descargan su código.
-const AdminShell = lazy(() => import("./layouts/AdminShell"));
-const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
-const AdminCodes = lazy(() => import("./pages/admin/AdminCodes"));
-const AdminPayments = lazy(() => import("./pages/admin/AdminPayments"));
-const AdminAccounts = lazy(() => import("./pages/admin/AdminAccounts"));
-const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
-const AdminPlans = lazy(() => import("./pages/admin/AdminPlans"));
-const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
-const AdminAudit = lazy(() => import("./pages/admin/AdminAudit"));
+// Si el archivo ya no existe (nueva versión publicada), recarga la página una vez.
+function lazyPage<T extends { default: ComponentType }>(load: () => Promise<T>) {
+  return lazy(() =>
+    load().catch((err) => {
+      const key = "e360-lazy-reload";
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, "1");
+        window.location.reload();
+        return new Promise<T>(() => {});
+      }
+      sessionStorage.removeItem(key);
+      throw err;
+    }),
+  );
+}
+const AdminShell = lazyPage(() => import("./layouts/AdminShell"));
+const AdminDashboard = lazyPage(() => import("./pages/admin/AdminDashboard"));
+const AdminCodes = lazyPage(() => import("./pages/admin/AdminCodes"));
+const AdminPayments = lazyPage(() => import("./pages/admin/AdminPayments"));
+const AdminAccounts = lazyPage(() => import("./pages/admin/AdminAccounts"));
+const AdminUsers = lazyPage(() => import("./pages/admin/AdminUsers"));
+const AdminPlans = lazyPage(() => import("./pages/admin/AdminPlans"));
+const AdminSettings = lazyPage(() => import("./pages/admin/AdminSettings"));
+const AdminAudit = lazyPage(() => import("./pages/admin/AdminAudit"));
 import type { WorkspaceKind } from "./lib/types";
 
 function RequireAuth() {
