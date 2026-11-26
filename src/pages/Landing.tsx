@@ -63,7 +63,7 @@ export default function Landing() {
       </section>
 
       {/* Modalidades */}
-      <section className="mx-auto -mt-12 max-w-6xl px-4 sm:px-6">
+      <section className="relative z-10 mx-auto -mt-12 max-w-6xl px-4 sm:px-6">
         <div className="grid gap-4 md:grid-cols-3">
           {(Object.keys(MODALITIES) as WorkspaceKind[]).map((k) => {
             const m = MODALITIES[k];
