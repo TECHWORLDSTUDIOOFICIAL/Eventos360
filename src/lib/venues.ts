@@ -21,9 +21,9 @@ export interface Booking {
   teardown_minutes: number; hold_until: string | null; hold_expired_at: string | null; rate_id: string | null; source: string | null;
   currency_code: string; discount_amount: number; tax_rate: number; advance_pct: number; subtotal: number; tax_amount: number; total: number;
   deposit_amount: number; deposit_received: number; deposit_refunded: number; deposit_retained: number; deposit_notes: string | null;
-  client_message: string | null; ops_notes: string | null; notes: string | null; confirmed_at: string | null; created_at: string;
+  client_message: string | null; ops_notes: string | null; notes: string | null; confirmed_at: string | null; created_at: string; cost_total?: number;
 }
-export interface BookingItem { id: string; booking_id: string; sort: number; description: string; quantity: number; unit_price: number; line_total: number }
+export interface BookingItem { id: string; booking_id: string; sort: number; description: string; quantity: number; unit_price: number; line_total: number; unit_cost?: number; supplier_id?: string | null }
 export interface Conflict { id: string; number: number; title: string; status: BookingStatus; kind: string; venue_name: string; starts_at: string; ends_at: string; hold_until: string | null }
 export interface PriceSuggestion {
   rate_id: string; rate_name: string; hours: number; base_hours: number; base_price: number; extra_hours: number; extra_hour_price: number;

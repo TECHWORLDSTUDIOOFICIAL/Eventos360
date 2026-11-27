@@ -18,6 +18,7 @@ import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { Alert, Button, Card, CardHeader, EmptyState, Field, Input, PageHeader, Select, Spinner, Textarea, cx } from "@/components/ui";
 import { PaymentDialog } from "@/pages/pro/FinancePage";
 import { DeliveryDialog, RentalStatusBadge, ReturnDialog, rentalRange } from "./rentalShared";
+import { CustomerSelect } from "@/components/QuickCreate";
 
 export default function RentalsPage() {
   const { itemId } = useParams();
@@ -95,7 +96,7 @@ function NewRental() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const invalidate = useInvalidateRental();
-  const { data: customers, isLoading: loadingCustomers } = useCustomers(ws.id);
+  const { isLoading: loadingCustomers } = useCustomers(ws.id);
   const { data: events } = useEvents(ws.id);
   const quoteId = params.get("cotizacion");
   const fromQuote = useQuery({
@@ -174,11 +175,9 @@ function NewRental() {
     <div className="animate-rise mx-auto max-w-xl">
       <PageHeader title="Nueva reservación" description={fromQuote.data ? `A partir de la cotización ${docNumber("COT", fromQuote.data.q.number)}. Se copiarán sus ${fromQuote.data.items.length} líneas.` : "Después agregas los artículos y el sistema verifica la disponibilidad."} />
       <Card className="p-5">
-        {loadingCustomers ? <Spinner /> : !customers?.length ? (
-          <Alert tone="info">Primero registra un cliente en <Link to={workspacePath(ws.kind, ws.id, "m/customers")} className="font-semibold underline">Clientes</Link>.</Alert>
-        ) : (
+        {loadingCustomers ? <Spinner /> : (
           <form onSubmit={submit} className="space-y-4">
-            <Field label="Cliente">{(id) => <Select id={id} value={f.customer_id} onChange={(e) => setF((s) => ({ ...s, customer_id: e.target.value, event_id: "" }))}><option value="">Elegir…</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>}</Field>
+            <Field label="Cliente">{(id) => <CustomerSelect id={id} value={f.customer_id} onChange={(v) => setF((s) => ({ ...s, customer_id: v, event_id: "" }))} />}</Field>
             {evs.length > 0 && <Field label="Evento" optional>{(id) => <Select id={id} value={f.event_id} onChange={(e) => set("event_id", e.target.value)}><option value="">Sin evento</option>{evs.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</Select>}</Field>}
             <Field label="Título">{(id) => <Input id={id} value={f.title} onChange={(e) => set("title", e.target.value)} placeholder="Ej. Boda Castillo – mobiliario" />}</Field>
             <div className="grid gap-3 sm:grid-cols-2">

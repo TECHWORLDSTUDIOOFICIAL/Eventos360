@@ -7,6 +7,9 @@ import { unwrap } from "@/lib/queries";
 import { publicMediaUrl, uploadImage, useEvents } from "@/lib/events";
 import { DEFAULT_QUOTE_INTRO, DEFAULT_QUOTE_TERMS, QUOTE_STATUS, QUOTE_TEMPLATES, docNumber, quoteUrl, useCustomers, useQuotes, waNumber, type Quote, type QuoteItem, type QuoteTemplate } from "@/lib/pro";
 import { useResources } from "@/lib/rental";
+import { marginTone, profit, useCatalog, usePackageItems, usePackages } from "@/lib/catalog";
+import { CustomerSelect, SupplierSelect } from "@/components/QuickCreate";
+import { ProfitSummary } from "@/components/ProfitSummary";
 import { formatDate, formatMoney } from "@/lib/format";
 import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
@@ -73,7 +76,7 @@ function NewQuote() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { data: customers, isLoading: loadingCustomers } = useCustomers(ws.id);
+  const { isLoading: loadingCustomers } = useCustomers(ws.id);
   const { data: events } = useEvents(ws.id);
   const [f, setF] = useState({ customer_id: params.get("cliente") ?? "", event_id: params.get("evento") ?? "", title: "", currency_code: region.currency_code, template: "clasica" as QuoteTemplate });
   const [error, setError] = useState<string | null>(null);
@@ -104,11 +107,10 @@ function NewQuote() {
     <div className="animate-rise mx-auto max-w-xl">
       <PageHeader title="Nueva cotización" />
       <Card className="p-5">
-        {loadingCustomers ? <Spinner /> : !customers?.length ? (
-          <Alert tone="info">Primero registra un cliente en <Link to={workspacePath(ws.kind, ws.id, "m/customers")} className="font-semibold underline">Clientes</Link>.</Alert>
-        ) : (
+        {loadingCustomers ? <Spinner /> : (
+          // Si el cliente no existe, se crea desde la misma lista ("+ Nuevo cliente…").
           <form onSubmit={submit} className="space-y-4">
-            <Field label="Cliente">{(id) => <Select id={id} value={f.customer_id} onChange={(e) => setF((s) => ({ ...s, customer_id: e.target.value, event_id: "" }))}><option value="">Elegir…</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>}</Field>
+            <Field label="Cliente">{(id) => <CustomerSelect id={id} value={f.customer_id} onChange={(v) => setF((s) => ({ ...s, customer_id: v, event_id: "" }))} />}</Field>
             <Field label="Evento" optional>{(id) => <Select id={id} value={f.event_id} onChange={(e) => setF((s) => ({ ...s, event_id: e.target.value }))}><option value="">Sin evento</option>{evs.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</Select>}</Field>
             <Field label="Título">{(id) => <Input id={id} value={f.title} onChange={(e) => setF((s) => ({ ...s, title: e.target.value }))} placeholder="Ej. Coordinación integral de boda" />}</Field>
             <Field label="Moneda">{(id) => <Select id={id} value={f.currency_code} onChange={(e) => setF((s) => ({ ...s, currency_code: e.target.value }))}><option value="NIO">Córdobas (C$)</option><option value="USD">Dólares (US$)</option></Select>}</Field>
@@ -138,6 +140,9 @@ function QuoteEditor({ id }: { id: string }) {
   const hasInventory = modules.some((m) => m.module_key === "inventory");
   const hasRentals = modules.some((m) => m.module_key === "reservations");
   const { data: resources } = useResources(ws.id);
+  const { data: catalog } = useCatalog(ws.id);
+  const { data: packages } = usePackages(ws.id);
+  const { data: pitems } = usePackageItems(ws.id);
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { data: customers } = useCustomers(ws.id);
@@ -145,7 +150,8 @@ function QuoteEditor({ id }: { id: string }) {
   const quote = useQuery({ queryKey: ["quote", id], queryFn: async () => unwrap<Quote>(await supabase.from("quotes").select("*").eq("id", id).single()) });
   const items = useQuery({ queryKey: ["quote-items", id], queryFn: async () => unwrap<QuoteItem[]>(await supabase.from("quote_items").select("*").eq("quote_id", id).order("sort").order("id")) });
   const [f, setF] = useState<Partial<Quote>>({});
-  const [line, setLine] = useState({ description: "", quantity: "1", unit_price: "", discount_pct: "0", resource_id: "", details: "" });
+  const EMPTY_LINE = { description: "", quantity: "1", unit_price: "", discount_pct: "0", resource_id: "", details: "", unit_cost: "", source: "", image_path: "" };
+  const [line, setLine] = useState(EMPTY_LINE);
   const [msg, setMsg] = useState<{ tone: "ok" | "danger" | "info"; text: string } | null>(null);
   const [paying, setPaying] = useState(false);
   useEffect(() => { if (quote.data) setF(quote.data); }, [quote.data]);
@@ -179,10 +185,11 @@ function QuoteEditor({ id }: { id: string }) {
     const { error } = await supabase.from("quote_items").insert({
       workspace_id: ws.id, quote_id: id, description: line.description.trim(), quantity: Number(line.quantity) || 1,
       unit_price: Number(line.unit_price) || 0, discount_pct: Number(line.discount_pct) || 0, sort: nextSort,
-      resource_id: line.resource_id || null, details: line.details || null,
+      resource_id: line.resource_id || null, details: line.details || null, unit_cost: Number(line.unit_cost) || 0, image_path: line.image_path || null,
+      catalog_item_id: line.source.startsWith("c:") ? line.source.slice(2) : null, package_id: line.source.startsWith("p:") ? line.source.slice(2) : null,
     });
     if (error) return setMsg({ tone: "danger", text: error.message });
-    setLine({ description: "", quantity: "1", unit_price: "", discount_pct: "0", resource_id: "", details: "" });
+    setLine(EMPTY_LINE);
     await refresh();
   }
   async function updateLine(it: QuoteItem, patch: Partial<QuoteItem>) {
@@ -196,14 +203,15 @@ function QuoteEditor({ id }: { id: string }) {
       if (file) path = await uploadImage("event-media", `${ws.id}/cotizaciones/${id}/${crypto.randomUUID()}.webp`, file, 1400);
       const { error } = await supabase.from("quote_items").update({ image_path: path }).eq("id", it.id);
       if (error) throw new Error(error.message);
-      if (it.image_path) await supabase.storage.from("event-media").remove([it.image_path]);
+      if (it.image_path?.includes("/cotizaciones/")) await supabase.storage.from("event-media").remove([it.image_path]);
       await refresh();
     } catch (err) {
       setMsg({ tone: "danger", text: (err as Error).message });
     }
   }
   async function removeLine(it: QuoteItem) {
-    if (it.image_path) await supabase.storage.from("event-media").remove([it.image_path]);
+    // Solo se borran fotos propias de la cotización (no las del catálogo o paquetes).
+    if (it.image_path?.includes("/cotizaciones/")) await supabase.storage.from("event-media").remove([it.image_path]);
     await supabase.from("quote_items").delete().eq("id", it.id);
     await refresh();
   }
@@ -282,13 +290,23 @@ function QuoteEditor({ id }: { id: string }) {
             </ul>
             {!locked && (
               <form onSubmit={addLine} className="grid gap-2 border-t border-line bg-paper/50 p-4 sm:grid-cols-[1fr_80px_120px_80px_auto]">
-                {hasInventory && !!resources?.length && (
-                  <Select className="sm:col-span-5" value={line.resource_id} aria-label="Agregar del inventario" onChange={(e) => {
-                    const r = resources.find((x) => x.id === e.target.value);
-                    setLine((s) => r ? { ...s, resource_id: r.id, description: r.name, unit_price: String(r.rent_price), details: r.description ?? "" } : { ...s, resource_id: "", details: "" });
+                {(!!catalog?.length || !!packages?.length || (hasInventory && !!resources?.length)) && (
+                  <Select className="sm:col-span-5" value={line.source} aria-label="Agregar del catálogo" onChange={(e) => {
+                    const v = e.target.value;
+                    const c = v.startsWith("c:") ? catalog?.find((x) => x.id === v.slice(2)) : undefined;
+                    const pk = v.startsWith("p:") ? packages?.find((x) => x.id === v.slice(2)) : undefined;
+                    const r = v.startsWith("r:") ? resources?.find((x) => x.id === v.slice(2)) : undefined;
+                    if (c) setLine({ ...EMPTY_LINE, source: v, description: c.name, unit_price: String(c.price), unit_cost: String(c.cost_total), details: c.description ?? "", image_path: c.image_path ?? "" });
+                    else if (pk) {
+                      const incl = (pitems ?? []).filter((x) => x.package_id === pk.id).map((x) => `${Number(x.quantity)} ${catalog?.find((c2) => c2.id === x.item_id)?.name ?? ""}`).join(", ");
+                      setLine({ ...EMPTY_LINE, source: v, description: pk.name, unit_price: String(pk.price), unit_cost: String(pk.cost_total), details: [pk.description, incl && `Incluye: ${incl}.`].filter(Boolean).join("\n"), image_path: pk.image_path ?? "" });
+                    } else if (r) setLine({ ...EMPTY_LINE, source: v, resource_id: r.id, description: r.name, unit_price: String(r.rent_price), details: r.description ?? "" });
+                    else setLine(EMPTY_LINE);
                   }}>
-                    <option value="">Del inventario (opcional)…</option>
-                    {resources.map((r) => <option key={r.id} value={r.id}>{r.name} · {formatMoney(Number(r.rent_price), r.currency_code, region.locale)}</option>)}
+                    <option value="">Agregar del catálogo (opcional)…</option>
+                    {!!packages?.length && <optgroup label="Paquetes">{packages.filter((x) => x.is_active).map((x) => <option key={x.id} value={`p:${x.id}`}>{x.name} · {formatMoney(Number(x.price), x.currency_code, region.locale)}</option>)}</optgroup>}
+                    {!!catalog?.length && <optgroup label="Catálogo">{catalog.filter((x) => x.is_active).map((x) => <option key={x.id} value={`c:${x.id}`}>{x.name} · {formatMoney(Number(x.price), x.currency_code, region.locale)}</option>)}</optgroup>}
+                    {hasInventory && !!resources?.length && <optgroup label="Inventario">{resources.map((x) => <option key={x.id} value={`r:${x.id}`}>{x.name} · {formatMoney(Number(x.rent_price), x.currency_code, region.locale)}</option>)}</optgroup>}
                   </Select>
                 )}
                 <Input value={line.description} onChange={(e) => setLine((s) => ({ ...s, description: e.target.value }))} placeholder="Nuevo servicio, producto u opción" aria-label="Nueva descripción" />
@@ -311,6 +329,7 @@ function QuoteEditor({ id }: { id: string }) {
               <div className="flex justify-between border-t border-line pt-2 text-base font-semibold"><dt>Total</dt><dd className="font-display text-2xl tabular-nums">{money(Number(q.total))}</dd></div>
               {Number(q.deposit_pct) > 0 && <div className="flex justify-between text-[var(--accent)]"><dt>Anticipo ({Number(q.deposit_pct)}%)</dt><dd className="font-semibold tabular-nums">{money(deposit)}</dd></div>}
             </dl>
+            <ProfitSummary net={Number(q.subtotal) - Math.min(Number(q.discount_amount), Number(q.subtotal))} cost={Number(q.cost_total)} tax={Number(q.tax_amount)} money={money} />
           </Card>
           <Card>
             <CardHeader title="Condiciones" />
@@ -394,7 +413,26 @@ function LineEditor({ it, n, locked, money, onUpdate, onRemove, onImage }: {
           <span className="ml-auto font-semibold tabular-nums">{money(Number(it.line_total))}</span>
           {!locked && <button onClick={() => void onRemove()} className="rounded-lg p-1.5 text-muted hover:text-danger" aria-label="Quitar línea"><Trash2 className="size-4" /></button>}
         </div>
+        <LineCost it={it} locked={locked} money={money} onUpdate={onUpdate} />
       </div>
     </li>
+  );
+}
+
+/** Costo interno de una línea y su proveedor (no aparece en el documento del cliente). */
+function LineCost({ it, locked, money, onUpdate }: { it: QuoteItem; locked: boolean; money: (v: number) => string; onUpdate: (patch: Partial<QuoteItem>) => Promise<void> }) {
+  const cost = Number(it.quantity) * Number(it.unit_cost ?? 0);
+  const net = Number(it.line_total);
+  const p = profit(net, cost);
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg bg-paper/70 px-2 py-1.5 text-xs text-muted">
+      <span className="font-semibold uppercase tracking-wide">Costo</span>
+      {locked ? <span>{money(Number(it.unit_cost ?? 0))} c/u</span> : (
+        <Input type="number" min="0" step="0.01" defaultValue={it.unit_cost ?? 0} key={`c${it.unit_cost}`} className="h-8 w-28 text-right" aria-label="Costo unitario"
+          onBlur={(e) => Number(e.target.value) !== Number(it.unit_cost ?? 0) && void onUpdate({ unit_cost: Number(e.target.value) || 0 })} />
+      )}
+      <SupplierSelect value={it.supplier_id ?? ""} disabled={locked} onChange={(v) => void onUpdate({ supplier_id: v || null })} emptyLabel="Proveedor (opcional)" className="h-8 w-48 text-xs" aria-label="Proveedor de la línea" />
+      <span className={cx("ml-auto font-semibold", cost > 0 ? marginTone(p.margin) : "")}>{cost > 0 ? `Ganas ${money(p.gain)} (${Math.round(p.margin)}%)` : "Sin costo"}</span>
+    </div>
   );
 }

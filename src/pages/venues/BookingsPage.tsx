@@ -18,6 +18,9 @@ import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { Alert, Badge, Button, Card, CardHeader, EmptyState, Field, Input, PageHeader, Select, Spinner, Textarea, cx } from "@/components/ui";
 import { PaymentDialog } from "@/pages/pro/FinancePage";
+import { SupplierSelect } from "@/components/QuickCreate";
+import { ProfitSummary } from "@/components/ProfitSummary";
+import { marginTone, profit } from "@/lib/catalog";
 
 export default function BookingsPage() {
   const { itemId } = useParams();
@@ -405,6 +408,7 @@ function BookingEditor({ id }: { id: string }) {
                 {Number(b.tax_rate) > 0 && <div className="flex justify-between"><dt className="text-muted">IVA ({Number(b.tax_rate)}%)</dt><dd className="tabular-nums">{money(Number(b.tax_amount))}</dd></div>}
                 <div className="flex justify-between border-t border-line pt-2 text-base font-semibold"><dt>Total</dt><dd className="font-display text-2xl tabular-nums">{money(Number(b.total))}</dd></div>
                 {Number(b.advance_pct) > 0 && <div className="flex justify-between text-[var(--accent)]"><dt>Anticipo para confirmar ({Number(b.advance_pct)}%)</dt><dd className="font-semibold tabular-nums">{money(advance)}</dd></div>}
+                <ProfitSummary net={Number(b.subtotal) - Math.min(Number(b.discount_amount), Number(b.subtotal))} cost={Number(b.cost_total ?? 0)} tax={Number(b.tax_amount)} money={money} />
                 {hasFinance && <>
                   <div className="flex justify-between border-t border-line pt-2"><dt className="text-muted">Pagado</dt><dd className="tabular-nums">{money(paid)}</dd></div>
                   <div className={cx("flex justify-between font-semibold", balance > 0.004 ? "text-warn" : "text-ok")}><dt>{balance > 0.004 ? "Saldo pendiente" : "Pagado por completo"}</dt><dd className="tabular-nums">{money(Math.max(0, balance))}</dd></div>
@@ -494,6 +498,14 @@ function LinesCard({ booking: b, items, editable, money, onError }: { booking: B
               </> : <span className="text-muted">{Number(it.quantity)} × {money(Number(it.unit_price))}</span>}
               <span className="w-28 text-right font-semibold tabular-nums">{money(Number(it.line_total))}</span>
               {editable && <button onClick={() => void remove(it)} className="rounded-lg p-1.5 text-muted hover:text-danger" aria-label={`Quitar ${it.description}`}><Trash2 className="size-4" /></button>}
+              <div className="flex w-full flex-wrap items-center gap-2 rounded-lg bg-paper/70 px-2 py-1.5 text-xs text-muted">
+                <span className="font-semibold uppercase tracking-wide">Costo</span>
+                {editable ? <Input type="number" min={0} step="0.01" defaultValue={it.unit_cost ?? 0} key={`c${it.unit_cost}`} className="h-8 w-28 text-right" aria-label="Costo unitario"
+                  onBlur={(e) => Number(e.target.value) !== Number(it.unit_cost ?? 0) && void update(it, { unit_cost: Number(e.target.value) || 0 })} /> : <span>{money(Number(it.unit_cost ?? 0))} c/u</span>}
+                <SupplierSelect value={it.supplier_id ?? ""} disabled={!editable} onChange={(v) => void update(it, { supplier_id: v || null })} emptyLabel="Proveedor (opcional)" className="h-8 w-48 text-xs" aria-label="Proveedor" />
+                {(() => { const c = Number(it.quantity) * Number(it.unit_cost ?? 0); const p = profit(Number(it.line_total), c);
+                  return <span className={cx("ml-auto font-semibold", c > 0 ? marginTone(p.margin) : "")}>{c > 0 ? `Ganas ${money(p.gain)} (${Math.round(p.margin)}%)` : "Sin costo (si es tuyo, déjalo en 0)"}</span>; })()}
+              </div>
             </li>
           ))}
         </ul>

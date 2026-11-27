@@ -73,8 +73,8 @@ export const SPECIALTY_ICONS: Record<string, LucideIcon> = {
 /** Módulos ya implementados por modalidad (el resto indica su etapa). */
 const IMPLEMENTED: Record<string, string[]> = {
   personal: ["home", "my_event", "guests", "invitations", "budget", "suppliers", "seating", "schedule", "tasks", "inspiration"],
-  professional: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget"],
-  business: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget",
+  professional: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget", "catalog", "packages"],
+  business: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget", "catalog", "packages",
     "inventory", "reservations", "availability", "deliveries", "returns", "maintenance", "team", "venues", "venue_rates", "bookings", "venue_calendar"],
 };
 
@@ -100,7 +100,7 @@ export const featureReady = (key: string, kind?: string) => !!FEATURE_AVAILABLE[
 export const NAV_GROUPS: { title: string; keys: string[] }[] = [
   { title: "Operación", keys: ["bookings", "venue_calendar", "reservations", "deliveries", "returns", "availability", "events", "calendar", "tasks", "schedule", "guests", "seating", "invitations", "installations", "orders", "sessions", "shifts", "menus"] },
   { title: "Espacios", keys: ["venues", "venue_rates"] },
-  { title: "Ventas", keys: ["customers", "quotes", "contracts", "packages", "catalog"] },
+  { title: "Ventas", keys: ["customers", "catalog", "packages", "quotes", "contracts"] },
   { title: "Inventario", keys: ["inventory", "maintenance", "ingredients", "deliverables", "portfolio"] },
   { title: "Administración", keys: ["finance", "suppliers", "workforce", "reports", "team", "budget"] },
 ];
