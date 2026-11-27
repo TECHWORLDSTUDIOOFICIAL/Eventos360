@@ -552,3 +552,6 @@ begin
 end $$;
 
 grant execute on function public.public_venues(text), public.public_venue_inquiry(text, uuid, date, text, int, text, text, text) to anon, authenticated;
+
+-- Capa adicional (aplicada aparte en producción como "venues_anon_hardening"): sin permisos directos para visitantes.
+revoke all on public.venues, public.venue_parts, public.venue_rates, public.bookings, public.booking_items, public.public_inquiry_log from anon;
