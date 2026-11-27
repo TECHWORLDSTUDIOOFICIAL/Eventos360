@@ -48,7 +48,7 @@ function Facts({ b, tz, locale, accent }: Omit<P, "items" | "biz"> & { accent: s
   const s = new Date(b.starts_at), e = new Date(b.ends_at);
   const setupFrom = new Date(s.getTime() - b.setup_minutes * 60_000), teardownTo = new Date(e.getTime() + b.teardown_minutes * 60_000);
   return (
-    <div className="mt-6 grid grid-cols-2 gap-6 text-[12.5px] leading-relaxed">
+    <div className="mt-6 grid grid-cols-[0.8fr_1.2fr] gap-6 text-[12.5px] leading-relaxed">
       <div>
         {label(accent, "Cliente")}
         <div className="mt-1 text-[14px] font-semibold">{b.customers?.name ?? "—"}</div>
@@ -61,7 +61,7 @@ function Facts({ b, tz, locale, accent }: Omit<P, "items" | "biz"> & { accent: s
           <tr><td className="pr-3 text-ink-soft">Fecha</td><td className="font-semibold">{scheduleText(b.starts_at, b.ends_at, tz, locale)}</td></tr>
           {b.setup_minutes > 0 && <tr><td className="pr-3 text-ink-soft">Montaje</td><td>desde las {t(setupFrom)} ({minutesText(b.setup_minutes)} antes)</td></tr>}
           {b.teardown_minutes > 0 && <tr><td className="pr-3 text-ink-soft">Desmontaje</td><td>hasta las {t(teardownTo)}</td></tr>}
-          <tr><td className="pr-3 text-ink-soft">Montaje de mesas</td><td>{SETUPS[b.setup].label}{b.guests ? ` · ${b.guests} invitados` : ""}{capacityFor(v, b.setup) ? ` (capacidad ${capacityFor(v, b.setup)})` : ""}</td></tr>
+          <tr><td className="whitespace-nowrap pr-3 text-ink-soft">Mesas</td><td>{SETUPS[b.setup].label}{b.guests ? ` · ${b.guests} invitados` : ""}{capacityFor(v, b.setup) ? ` (capacidad ${capacityFor(v, b.setup)})` : ""}</td></tr>
         </tbody></table>
       </div>
     </div>
@@ -88,13 +88,22 @@ function Confirmation({ b, items, biz, tz, locale }: P) {
         </tr></thead>
         <tbody>{items.map((it, i) => (
           <tr key={it.id} className={i % 2 ? "bg-paper/70" : ""}>
-            <td className="px-3 py-2">{it.description}</td><td className="px-3 py-2 text-right tabular-nums">{Number(it.quantity)}</td>
-            <td className="px-3 py-2 text-right tabular-nums">{m(Number(it.unit_price))}</td><td className="px-3 py-2 text-right font-semibold tabular-nums">{m(Number(it.line_total))}</td>
+            <td className="px-3 py-1.5">{it.description}</td><td className="px-3 py-1.5 text-right tabular-nums">{Number(it.quantity)}</td>
+            <td className="px-3 py-1.5 text-right tabular-nums">{m(Number(it.unit_price))}</td><td className="px-3 py-1.5 text-right font-semibold tabular-nums">{m(Number(it.line_total))}</td>
           </tr>
         ))}</tbody>
       </table>
-      <div className="no-break mt-4 flex justify-end">
-        <dl className="w-72 space-y-1.5 text-[13px]">
+      <div className="no-break mt-4 grid grid-cols-[1fr_18rem] gap-8">
+        <div>
+          {label(accent, "Condiciones")}
+          <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-[11px] leading-relaxed text-ink-soft">
+            <li>La fecha queda reservada al recibir el anticipo indicado{b.status === "hold" && b.hold_until ? `, a más tardar el ${formatDate(b.hold_until, { timeZone: tz, locale })}` : ""}.</li>
+            <li>El saldo debe cancelarse antes del inicio del montaje.</li>
+            <li>La garantía se devuelve después del evento, descontando daños o limpieza extraordinaria si los hubiera.</li>
+            <li>El uso del espacio fuera del horario contratado se cobra como hora adicional.</li>
+          </ol>
+        </div>
+        <dl className="space-y-1.5 text-[13px]">
           <div className="flex justify-between"><dt className="text-ink-soft">Subtotal</dt><dd className="tabular-nums">{m(Number(b.subtotal))}</dd></div>
           {disc > 0 && <div className="flex justify-between"><dt className="text-ink-soft">Descuento</dt><dd className="tabular-nums">−{m(disc)}</dd></div>}
           {Number(b.tax_rate) > 0 && <div className="flex justify-between"><dt className="text-ink-soft">IVA ({Number(b.tax_rate)}%)</dt><dd className="tabular-nums">{m(Number(b.tax_amount))}</dd></div>}
@@ -104,26 +113,19 @@ function Confirmation({ b, items, biz, tz, locale }: P) {
         </dl>
       </div>
       {(b.venues.includes || b.venues.rules) && (
-        <section className="no-break mt-6 grid grid-cols-2 gap-6 text-[11.5px] leading-relaxed">
+        <section className="no-break mt-5 grid grid-cols-2 gap-6 text-[11.5px] leading-relaxed">
           {b.venues.includes && <div>{label(accent, "Incluye")}<p className="mt-1 whitespace-pre-line text-ink-soft">{b.venues.includes}</p></div>}
           {b.venues.rules && <div>{label(accent, "Reglas del espacio")}<p className="mt-1 whitespace-pre-line text-ink-soft">{b.venues.rules}</p></div>}
         </section>
       )}
-      <section className="no-break mt-6">
-        {label(accent, "Condiciones")}
-        <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-[11.5px] leading-relaxed text-ink-soft">
-          <li>La fecha queda reservada al recibir el anticipo indicado{b.status === "hold" && b.hold_until ? `, a más tardar el ${formatDate(b.hold_until, { timeZone: tz, locale })}` : ""}.</li>
-          <li>El saldo debe cancelarse antes del inicio del montaje.</li>
-          <li>La garantía se devuelve después del evento, descontando daños o limpieza extraordinaria si los hubiera.</li>
-          <li>El uso del espacio fuera del horario contratado se cobra como hora adicional.</li>
-        </ol>
+      <section className="no-break">
+        <div className="mt-4 grid grid-cols-2 gap-10 text-center">
+          {[[biz.signer_name || biz.name, biz.name], [b.customers?.name ?? "", "El cliente"]].map(([n, r]) => (
+            <div key={r}><div className="h-12" /><div className="border-t-[1.5px] border-ink pt-2 text-[12.5px] font-semibold">{n || "Nombre: ________________"}</div>
+              <div className="mt-0.5 text-[10.5px] font-semibold uppercase tracking-[0.2em]" style={{ color: accent }}>{r}</div></div>
+          ))}
+        </div>
       </section>
-      <div className="no-break mt-12 grid grid-cols-2 gap-10 text-center">
-        {[[biz.signer_name || biz.name, biz.name], [b.customers?.name ?? "", "El cliente"]].map(([n, r]) => (
-          <div key={r}><div className="h-14" /><div className="border-t-[1.5px] border-ink pt-2 text-[12.5px] font-semibold">{n || "Nombre: ________________"}</div>
-            <div className="mt-0.5 text-[10.5px] font-semibold uppercase tracking-[0.2em]" style={{ color: accent }}>{r}</div></div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -144,14 +146,14 @@ function EventSheet({ b, items, biz, tz, locale }: P) {
       </section>
       {b.ops_notes && <section className="mt-5">{label(accent, "Indicaciones")}<p className="mt-1 whitespace-pre-line rounded-lg border border-line px-4 py-3 text-[12.5px]">{b.ops_notes}</p></section>}
       {b.venues.rules && <section className="mt-5">{label(accent, "Reglas del espacio")}<p className="mt-1 whitespace-pre-line text-[11.5px] text-ink-soft">{b.venues.rules}</p></section>}
-      <section className="no-break mt-6">
+      <section className="no-break mt-5">
         {label(accent, "Lista de revisión")}
-        <ul className="mt-2 grid grid-cols-2 gap-x-6 gap-y-2 text-[12.5px]">{checklist.map((c) => <li key={c} className="flex items-center gap-2">{box}{c}</li>)}</ul>
+        <ul className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1.5 text-[12.5px]">{checklist.map((c) => <li key={c} className="flex items-center gap-2">{box}{c}</li>)}</ul>
       </section>
-      <section className="no-break mt-6">
+      <section className="no-break mt-5">
         {label(accent, "Observaciones al cierre")}
-        <div className="mt-2 space-y-5">{[0, 1, 2].map((i) => <div key={i} className="border-b border-line-strong" />)}</div>
-        <div className="mt-10 grid grid-cols-2 gap-10 text-center text-[11px]">
+        <div className="mt-1 space-y-5">{[0, 1].map((i) => <div key={i} className="h-1 border-b border-line-strong" />)}</div>
+        <div className="mt-9 grid grid-cols-2 gap-10 text-center text-[11px]">
           {["Responsable del local", "Cliente / responsable del evento"].map((r) => <div key={r}><div className="border-t-[1.5px] border-ink pt-2 font-semibold uppercase tracking-[0.15em]" style={{ color: accent }}>{r}</div></div>)}
         </div>
       </section>

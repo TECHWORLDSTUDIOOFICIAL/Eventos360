@@ -489,7 +489,7 @@ function LinesCard({ booking: b, items, editable, money, onError }: { booking: B
               {editable ? <Input defaultValue={it.description} key={`d${it.description}`} className="h-9 min-w-0 flex-1" aria-label="Concepto" onBlur={(e) => e.target.value.trim() && e.target.value !== it.description && void update(it, { description: e.target.value.trim() })} />
                 : <span className="min-w-0 flex-1">{it.description}</span>}
               {editable ? <>
-                <Input type="number" min={0.01} step="0.5" defaultValue={it.quantity} key={`q${it.quantity}`} className="h-9 w-20 text-right" aria-label="Cantidad" onBlur={(e) => Number(e.target.value) > 0 && Number(e.target.value) !== Number(it.quantity) && void update(it, { quantity: Number(e.target.value) })} />
+                <Input type="number" min={0.01} step="any" defaultValue={it.quantity} key={`q${it.quantity}`} className="h-9 w-20 text-right" aria-label="Cantidad" onBlur={(e) => Number(e.target.value) > 0 && Number(e.target.value) !== Number(it.quantity) && void update(it, { quantity: Number(e.target.value) })} />
                 <Input type="number" min={0} step="0.01" defaultValue={it.unit_price} key={`p${it.unit_price}`} className="h-9 w-28 text-right" aria-label="Precio" onBlur={(e) => Number(e.target.value) >= 0 && Number(e.target.value) !== Number(it.unit_price) && void update(it, { unit_price: Number(e.target.value) })} />
               </> : <span className="text-muted">{Number(it.quantity)} × {money(Number(it.unit_price))}</span>}
               <span className="w-28 text-right font-semibold tabular-nums">{money(Number(it.line_total))}</span>
@@ -501,7 +501,7 @@ function LinesCard({ booking: b, items, editable, money, onError }: { booking: B
       {editable && (
         <form onSubmit={add} className="grid gap-2 border-t border-line bg-paper/50 p-4 sm:grid-cols-[1fr_80px_120px_auto]">
           <Input value={line.description} onChange={(e) => setLine((s) => ({ ...s, description: e.target.value }))} placeholder="Concepto: decoración, DJ, limpieza, hora extra…" aria-label="Nuevo concepto" />
-          <Input type="number" min={0.01} step="0.5" value={line.quantity} onChange={(e) => setLine((s) => ({ ...s, quantity: e.target.value }))} aria-label="Cantidad" className="text-right" />
+          <Input type="number" min={0.01} step="any" value={line.quantity} onChange={(e) => setLine((s) => ({ ...s, quantity: e.target.value }))} aria-label="Cantidad" className="text-right" />
           <Input type="number" min={0} step="0.01" value={line.price} onChange={(e) => setLine((s) => ({ ...s, price: e.target.value }))} placeholder="Precio" aria-label="Precio" className="text-right" />
           <Button type="submit" variant="secondary" icon={<Plus className="size-4" />} disabled={!line.description.trim()}>Agregar</Button>
         </form>

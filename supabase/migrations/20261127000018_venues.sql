@@ -20,6 +20,8 @@ update public.specialty_modules set module_key = 'bookings', sort = 20, label_ov
 update public.specialty_modules set module_key = 'venue_calendar', sort = 15, label_override = null where specialty_key = 'venue' and module_key = 'availability';
 update public.specialty_modules set sort = 10 where specialty_key = 'venue' and module_key = 'venues';
 update public.specialty_modules set sort = 40 where specialty_key = 'venue' and module_key = 'venue_rates';
+-- "Calendario" (citas y visitas) se llama "Agenda" para no confundirlo con "Ocupación".
+update public.specialty_modules set label_override = 'Agenda' where specialty_key = 'venue' and module_key = 'calendar';
 
 -- ---------------------------------------------------------------------
 -- Espacios
