@@ -95,7 +95,7 @@ function NewRental() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const invalidate = useInvalidateRental();
-  const { data: customers } = useCustomers(ws.id);
+  const { data: customers, isLoading: loadingCustomers } = useCustomers(ws.id);
   const { data: events } = useEvents(ws.id);
   const quoteId = params.get("cotizacion");
   const fromQuote = useQuery({
@@ -174,7 +174,7 @@ function NewRental() {
     <div className="animate-rise mx-auto max-w-xl">
       <PageHeader title="Nueva reservación" description={fromQuote.data ? `A partir de la cotización ${docNumber("COT", fromQuote.data.q.number)}. Se copiarán sus ${fromQuote.data.items.length} líneas.` : "Después agregas los artículos y el sistema verifica la disponibilidad."} />
       <Card className="p-5">
-        {!customers?.length ? (
+        {loadingCustomers ? <Spinner /> : !customers?.length ? (
           <Alert tone="info">Primero registra un cliente en <Link to={workspacePath(ws.kind, ws.id, "m/customers")} className="font-semibold underline">Clientes</Link>.</Alert>
         ) : (
           <form onSubmit={submit} className="space-y-4">
@@ -421,7 +421,7 @@ function ItemsCard({ rental: r, items, editable, money, onError }: {
 
   return (
     <Card>
-      <CardHeader title="Artículos y servicios" description={holds ? "Estas unidades están bloqueadas para estas fechas." : "En borrador no se aparta nada todavía: la disponibilidad se confirma al apartar."} />
+      <CardHeader title="Artículos y servicios" description={holds ? "Estas unidades están bloqueadas para estas fechas." : r.status === "draft" ? "En borrador no se aparta nada todavía: la disponibilidad se confirma al apartar." : r.status === "returned" ? "Resultado de la revisión al recibir los artículos." : undefined} />
       {shortage.length > 0 && r.status === "draft" && (
         <div className="px-4 pt-4"><Alert tone="warn" title="No alcanza para estas fechas">{shortage.map(({ i, f }) => `${i.description}: pides ${usedHere(i.resource_id!)}, hay ${Math.max(0, f ?? 0)} libres`).join(" · ")}. Ajusta las cantidades o las fechas antes de apartar.</Alert></div>
       )}
@@ -435,13 +435,14 @@ function ItemsCard({ rental: r, items, editable, money, onError }: {
               {items.map((it) => {
                 const resource = res(it.resource_id);
                 const f = it.resource_id ? free(it.resource_id) : undefined;
-                const over = f !== undefined && it.resource_id ? usedHere(it.resource_id) > f : false;
+                const live = r.status === "draft" || r.status === "reserved";   // la disponibilidad solo importa antes de entregar
+                const over = live && f !== undefined && it.resource_id ? usedHere(it.resource_id) > f : false;
                 return (
                   <tr key={it.id} className="align-top">
                     <td className="px-4 py-2.5">
                       <div className="font-medium">{it.description}</div>
                       <div className={cx("text-xs", over ? "font-semibold text-danger" : "text-muted")}>
-                        {it.resource_id ? (f === undefined ? "Calculando…" : `${Math.max(0, f)} libres en estas fechas${resource ? ` de ${resource.total_qty}` : ""}`) : "Servicio (no usa inventario)"}
+                        {it.resource_id ? (!live ? (resource?.category ?? "Artículo de inventario") : f === undefined ? "Calculando…" : `${Math.max(0, f)} libres en estas fechas${resource ? ` de ${resource.total_qty}` : ""}`) : "Servicio (no usa inventario)"}
                       </div>
                     </td>
                     <td className="px-2 py-2.5 text-right">

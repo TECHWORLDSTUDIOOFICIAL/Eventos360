@@ -7,7 +7,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { PrintLayout, Sheet } from "@/components/PrintLayout";
-import { Spinner } from "@/components/ui";
+import { Spinner, cx } from "@/components/ui";
 import NotFound from "@/pages/NotFound";
 import { HeaderClassic, type DocBusiness } from "@/pages/pro/print/documents";
 import { toDocBusiness, useBusiness } from "@/pages/pro/print/PrintQuote";
@@ -77,16 +77,16 @@ function Parties({ r, locale, tz, accent }: Omit<DocProps, "items" | "b" | "numb
   );
 }
 
-function Signatures({ left, right, accent }: { left: { role: string; name?: string | null }; right: { role: string; name?: string | null }; accent: string }) {
+function Signatures({ left, right, accent, compact }: { left: { role: string; name?: string | null }; right: { role: string; name?: string | null }; accent: string; compact?: boolean }) {
   const Block = ({ role, name }: { role: string; name?: string | null }) => (
     <div className="text-center">
-      <div className="h-16" />
+      <div className={compact ? "h-12" : "h-16"} />
       <div className="border-t-[1.5px] border-ink pt-2 text-[12.5px] font-semibold">{name || "Nombre: ____________________________"}</div>
       <div className="text-[11.5px] text-ink-soft">Cédula: ____________________ · Fecha: ____________</div>
       <div className="mt-0.5 text-[10.5px] font-semibold uppercase tracking-[0.2em]" style={{ color: accent }}>{role}</div>
     </div>
   );
-  return <div className="no-break mt-12 grid grid-cols-2 gap-10"><Block {...left} /><Block {...right} /></div>;
+  return <div className={cx("no-break grid grid-cols-2 gap-10", compact ? "mt-2" : "mt-12")}><Block {...left} /><Block {...right} /></div>;
 }
 
 function OrderDoc({ r, items, b, number, locale, tz }: DocProps) {
@@ -172,13 +172,17 @@ function DeliveryDoc({ r, items, b, number, locale, tz }: DocProps) {
       {services.length > 0 && <p className="mt-3 text-[12px] text-ink-soft"><b>Servicios incluidos:</b> {services.map((s) => s.description).join(" · ")}</p>}
       {Number(r.deposit_amount) > 0 && <p className="mt-3 text-[12.5px]">Depósito de garantía: <b>{formatMoney(Number(r.deposit_amount), r.currency_code, locale)}</b> · Recibido: {formatMoney(Number(r.deposit_received), r.currency_code, locale)}</p>}
       {r.notes && <p className="mt-3 whitespace-pre-line text-[12.5px]"><b>Notas:</b> {r.notes}</p>}
-      <p className="mt-6 rounded-lg border border-line px-4 py-3 text-[11.5px] leading-relaxed text-ink-soft">
-        Con su firma, el cliente declara haber recibido los artículos arriba detallados, completos y en buen estado, y se compromete a devolverlos en las mismas condiciones en la fecha indicada. Los daños o faltantes se cobrarán a su costo de reposición.
-      </p>
-      <div className="mt-2 text-center text-[11px] font-semibold uppercase tracking-[0.25em] text-muted">Entrega</div>
-      <Signatures left={{ role: `Entregado por ${b.name}` }} right={{ role: "Recibido conforme (cliente)", name: r.out_received_by }} accent={accent} />
-      <div className="no-break mt-10 border-t border-dashed border-line-strong pt-4 text-center text-[11px] font-semibold uppercase tracking-[0.25em] text-muted">Devolución</div>
-      <Signatures left={{ role: "Devuelto por (cliente)" }} right={{ role: `Revisado por ${b.name}` }} accent={accent} />
+      <section className="no-break mt-5">
+        <p className="rounded-lg border border-line px-4 py-2.5 text-[11.5px] leading-relaxed text-ink-soft">
+          Con su firma, el cliente declara haber recibido los artículos arriba detallados, completos y en buen estado, y se compromete a devolverlos en las mismas condiciones en la fecha indicada. Los daños o faltantes se cobrarán a su costo de reposición.
+        </p>
+        <div className="mt-3 text-center text-[11px] font-semibold uppercase tracking-[0.25em] text-muted">Entrega</div>
+        <Signatures compact left={{ role: `Entregado por ${b.name}` }} right={{ role: "Recibido conforme (cliente)", name: r.out_received_by }} accent={accent} />
+      </section>
+      <section className="no-break mt-6 border-t border-dashed border-line-strong pt-3">
+        <div className="text-center text-[11px] font-semibold uppercase tracking-[0.25em] text-muted">Devolución</div>
+        <Signatures compact left={{ role: "Devuelto por (cliente)" }} right={{ role: `Revisado por ${b.name}` }} accent={accent} />
+      </section>
     </div>
   );
 }

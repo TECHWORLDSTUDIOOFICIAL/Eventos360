@@ -179,8 +179,10 @@ function NewContract() {
     const advance = rt ? Math.round(Number(rt.total) * Number(rt.advance_pct)) / 100 : q ? Math.round(Number(q.total) * Number(q.deposit_pct)) / 100 : null;
     const body = fillTemplate(tpl, {
       cliente: c.name, cliente_identificacion: c.tax_id ?? "__________", cliente_direccion: c.address ?? "__________",
-      evento: ev?.name ?? "__________", fecha_evento: ev?.starts_at ? formatDate(ev.starts_at, { timeZone: region.timezone, locale: region.locale, withTime: true }) : "__________",
-      lugar: [ev?.venue_name, ev?.venue_address].filter(Boolean).join(", ") || "__________", invitados: ev?.guests_estimate ? String(ev.guests_estimate) : "__________",
+      // Sin evento, una reservación aporta su título, su fecha de entrega y su dirección.
+      evento: ev?.name ?? rt?.title ?? "__________",
+      fecha_evento: ev?.starts_at ? formatDate(ev.starts_at, { timeZone: region.timezone, locale: region.locale, withTime: true }) : rt ? dt(rt.starts_at) : "__________",
+      lugar: [ev?.venue_name, ev?.venue_address].filter(Boolean).join(", ") || rt?.delivery_address || "__________", invitados: ev?.guests_estimate ? String(ev.guests_estimate) : "__________",
       monto: total != null ? m(total) : "__________", anticipo: advance != null ? m(advance) : "__________", articulos,
       fecha_entrega: rt ? dt(rt.starts_at) : "__________", fecha_devolucion: rt ? dt(rt.ends_at) : "__________",
       deposito: rt && Number(rt.deposit_amount) > 0 ? m(Number(rt.deposit_amount)) : "__________",

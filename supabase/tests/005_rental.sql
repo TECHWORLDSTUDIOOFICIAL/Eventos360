@@ -176,6 +176,9 @@ end $$;
 do $$
 declare r1 uuid := (select c.v::uuid from t_ctx c where c.k='r1'); it uuid; rv record;
 begin
+  -- Varios artículos: la devolución no debe fallar porque los daños de uno reduzcan la existencia (pico de sillas = 100).
+  insert into public.rental_items(workspace_id, rental_id, resource_id, description, quantity, unit_price, sort)
+    values ((select c.v::uuid from t_ctx c where c.k='wa'), r1, (select c.v::uuid from t_ctx c where c.k='mesa'), 'Mesa redonda 10 pax', 2, 150, 9);
   update public.rentals set status = 'out', out_received_by = 'Gerente del hotel' where id = r1;
   if (select out_at from public.rentals where id = r1) is null then raise exception 'FALLO: no se registró la entrega'; end if;
   begin update public.rental_items set quantity = 10 where rental_id = r1 and resource_id is not null; raise exception 'FALLO: cambió cantidades después de entregar';
@@ -183,13 +186,13 @@ begin
   begin delete from public.rental_items where rental_id = r1; raise exception 'FALLO: quitó artículos después de entregar';
   exception when sqlstate 'P0001' then if sqlerrm like 'FALLO%' then raise; end if; end;
   -- Los datos de revisión no se escriben a mano
-  update public.rental_items set damaged_qty = 50 where rental_id = r1 and resource_id is not null;
-  if (select damaged_qty from public.rental_items where rental_id = r1 and resource_id is not null) <> 0 then raise exception 'FALLO: revisión escrita a mano'; end if;
+  update public.rental_items set damaged_qty = 50 where rental_id = r1 and resource_id = (select c.v::uuid from t_ctx c where c.k='silla');
+  if (select damaged_qty from public.rental_items where rental_id = r1 and resource_id = (select c.v::uuid from t_ctx c where c.k='silla')) <> 0 then raise exception 'FALLO: revisión escrita a mano'; end if;
   begin
-    perform public.rental_register_return(r1, jsonb_build_array(jsonb_build_object('id', (select id from public.rental_items where rental_id = r1 and resource_id is not null), 'damaged', 70, 'lost', 20)), null);
+    perform public.rental_register_return(r1, jsonb_build_array(jsonb_build_object('id', (select id from public.rental_items where rental_id = r1 and resource_id = (select c.v::uuid from t_ctx c where c.k='silla')), 'damaged', 70, 'lost', 20)), null);
     raise exception 'FALLO: dañados + perdidos > entregados';
   exception when sqlstate 'P0001' or check_violation then if sqlerrm like 'FALLO%' then raise; end if; end;
-  select id into it from public.rental_items where rental_id = r1 and resource_id is not null;
+  select id into it from public.rental_items where rental_id = r1 and resource_id = (select c.v::uuid from t_ctx c where c.k='silla');
   perform public.rental_register_return(r1, jsonb_build_array(jsonb_build_object('id', it, 'damaged', 5, 'lost', 2, 'charge', 1950, 'notes', 'Respaldos quebrados')), 'Revisado con el cliente');
   select * into rv from public.rentals where id = r1;
   if rv.status <> 'returned' or rv.returned_at is null or rv.damage_total <> 1950 then raise exception 'FALLO: cierre de devolución (% %)', rv.status, rv.damage_total; end if;

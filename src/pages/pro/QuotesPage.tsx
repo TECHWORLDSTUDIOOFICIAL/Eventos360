@@ -73,7 +73,7 @@ function NewQuote() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { data: customers } = useCustomers(ws.id);
+  const { data: customers, isLoading: loadingCustomers } = useCustomers(ws.id);
   const { data: events } = useEvents(ws.id);
   const [f, setF] = useState({ customer_id: params.get("cliente") ?? "", event_id: params.get("evento") ?? "", title: "", currency_code: region.currency_code, template: "clasica" as QuoteTemplate });
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +104,7 @@ function NewQuote() {
     <div className="animate-rise mx-auto max-w-xl">
       <PageHeader title="Nueva cotización" />
       <Card className="p-5">
-        {!customers?.length ? (
+        {loadingCustomers ? <Spinner /> : !customers?.length ? (
           <Alert tone="info">Primero registra un cliente en <Link to={workspacePath(ws.kind, ws.id, "m/customers")} className="font-semibold underline">Clientes</Link>.</Alert>
         ) : (
           <form onSubmit={submit} className="space-y-4">
