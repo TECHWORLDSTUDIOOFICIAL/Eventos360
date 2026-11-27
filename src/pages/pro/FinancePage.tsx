@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BadgeDollarSign, Download, Pencil, Plus, Receipt, Trash2 } from "lucide-react";
@@ -37,6 +37,7 @@ export default function FinancePage() {
   const [period, setPeriod] = useState<"mes" | "anterior" | "anio" | "todo">("mes");
   const [editing, setEditing] = useState<Payment | "new" | null>(null);
   const [editingExp, setEditingExp] = useState<BusinessExpense | "new" | null>(null);
+  const [currencyTouched, setCurrencyTouched] = useState(false);
   const money = (n: number, c = currency) => formatMoney(n, c, region.locale);
   const cust = (id: string | null) => customers?.find((c) => c.id === id)?.name ?? "";
   const evName = (id: string | null) => events?.find((e) => e.id === id)?.name ?? "";
@@ -65,6 +66,13 @@ export default function FinancePage() {
     ...(bookingRows ?? []).filter((b) => b.kind === "event" && (b.status === "confirmed" || b.status === "done")).map((b) => ({ event_id: b.event_id, currency_code: b.currency_code, date: b.starts_at.slice(0, 10),
       net: Number(b.subtotal) - Math.min(Number(b.discount_amount), Number(b.subtotal)), cost: Number(b.cost_total ?? 0), gross: Number(b.total), retained: Number(b.deposit_retained) })),
   ], [quotes, rentalRows, bookingRows]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Abrir en la moneda donde hay movimientos (si todo está en dólares, no mostrar córdobas en cero)
+  useEffect(() => {
+    if (currencyTouched) return;
+    const used = [...deals.map((d) => d.currency_code), ...(payments ?? []).map((p) => p.currency_code), ...(expensesBiz ?? []).map((x) => x.currency_code)];
+    setCurrency(!used.length || used.includes(region.currency_code) ? region.currency_code : used[0]!);
+  }, [deals, payments, expensesBiz, currencyTouched, region.currency_code]);
 
   // Costos de cada evento: el mayor entre lo estimado en sus cotizaciones y los gastos registrados en el evento.
   const eventExpense = (id: string) => (expenses.data ?? []).filter((x) => x.event_id === id).reduce((s, x) => s + Number(x.agreed_amount ?? x.planned_amount), 0);
@@ -130,7 +138,7 @@ export default function FinancePage() {
       <PageHeader title="Finanzas" description="Cuánto vendiste, cuánto te costó y cuánto te quedó de verdad (sin IVA y después de los gastos del negocio)."
         actions={<>
           <Select value={period} onChange={(e) => setPeriod(e.target.value as typeof period)} className="h-10 w-auto" aria-label="Período"><option value="mes">Este mes</option><option value="anterior">Mes pasado</option><option value="anio">Este año</option><option value="todo">Todo</option></Select>
-          <Select value={currency} onChange={(e) => setCurrency(e.target.value)} className="h-10 w-auto" aria-label="Moneda"><option value="NIO">Córdobas (C$)</option><option value="USD">Dólares (US$)</option></Select>
+          <Select value={currency} onChange={(e) => { setCurrencyTouched(true); setCurrency(e.target.value); }} className="h-10 w-auto" aria-label="Moneda"><option value="NIO">Córdobas (C$)</option><option value="USD">Dólares (US$)</option></Select>
           {!readOnly && <Button variant="accent" icon={<Plus className="size-4" />} onClick={() => setEditing("new")}>Registrar pago</Button>}
         </>} />
 

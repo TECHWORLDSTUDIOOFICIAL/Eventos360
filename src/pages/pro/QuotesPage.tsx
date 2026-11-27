@@ -431,7 +431,7 @@ function LineCost({ it, locked, money, onUpdate }: { it: QuoteItem; locked: bool
         <Input type="number" min="0" step="0.01" defaultValue={it.unit_cost ?? 0} key={`c${it.unit_cost}`} className="h-8 w-28 text-right" aria-label="Costo unitario"
           onBlur={(e) => Number(e.target.value) !== Number(it.unit_cost ?? 0) && void onUpdate({ unit_cost: Number(e.target.value) || 0 })} />
       )}
-      <SupplierSelect value={it.supplier_id ?? ""} disabled={locked} onChange={(v) => void onUpdate({ supplier_id: v || null })} emptyLabel="Proveedor (opcional)" className="h-8 w-48 text-xs" aria-label="Proveedor de la línea" />
+      <SupplierSelect value={it.supplier_id ?? ""} disabled={locked} onChange={(v) => void onUpdate({ supplier_id: v || null })} emptyLabel="Proveedor" className="h-8 w-44 text-sm" aria-label="Proveedor de la línea" />
       <span className={cx("ml-auto font-semibold", cost > 0 ? marginTone(p.margin) : "")}>{cost > 0 ? `Ganas ${money(p.gain)} (${Math.round(p.margin)}%)` : "Sin costo"}</span>
     </div>
   );

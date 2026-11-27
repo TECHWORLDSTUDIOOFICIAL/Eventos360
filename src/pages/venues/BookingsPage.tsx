@@ -502,7 +502,7 @@ function LinesCard({ booking: b, items, editable, money, onError }: { booking: B
                 <span className="font-semibold uppercase tracking-wide">Costo</span>
                 {editable ? <Input type="number" min={0} step="0.01" defaultValue={it.unit_cost ?? 0} key={`c${it.unit_cost}`} className="h-8 w-28 text-right" aria-label="Costo unitario"
                   onBlur={(e) => Number(e.target.value) !== Number(it.unit_cost ?? 0) && void update(it, { unit_cost: Number(e.target.value) || 0 })} /> : <span>{money(Number(it.unit_cost ?? 0))} c/u</span>}
-                <SupplierSelect value={it.supplier_id ?? ""} disabled={!editable} onChange={(v) => void update(it, { supplier_id: v || null })} emptyLabel="Proveedor (opcional)" className="h-8 w-48 text-xs" aria-label="Proveedor" />
+                <SupplierSelect value={it.supplier_id ?? ""} disabled={!editable} onChange={(v) => void update(it, { supplier_id: v || null })} emptyLabel="Proveedor" className="h-8 w-44 text-sm" aria-label="Proveedor" />
                 {(() => { const c = Number(it.quantity) * Number(it.unit_cost ?? 0); const p = profit(Number(it.line_total), c);
                   return <span className={cx("ml-auto font-semibold", c > 0 ? marginTone(p.margin) : "")}>{c > 0 ? `Ganas ${money(p.gain)} (${Math.round(p.margin)}%)` : "Sin costo (si es tuyo, déjalo en 0)"}</span>; })()}
               </div>
