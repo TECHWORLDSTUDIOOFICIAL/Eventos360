@@ -95,10 +95,16 @@ end $$;
 reset role;
 insert into t_ctx select 'ktok', public_token from public.contracts;
 set local role anon;
-select public.public_accept_contract((select v from t_ctx where k='ktok'), 'Carlos Rodríguez Pérez', '001-010190-0001A');
+do $$ begin
+  begin perform public.public_accept_contract((select v from t_ctx where k='ktok'), 'Carlos Rodríguez Pérez', '001-010190-0001A', null);
+    raise exception 'FALLO: firmó sin dibujar la firma';
+  exception when sqlstate 'P0001' then if sqlerrm like 'FALLO%' then raise; end if; end;
+end $$;
+select public.public_accept_contract((select v from t_ctx where k='ktok'), 'Carlos Rodríguez Pérez', '001-010190-0001A', 'data:image/png;base64,' || repeat('A', 400));
 reset role;
 do $$ begin
-  if (select status from public.contracts) <> 'accepted' or (select accepted_hash from public.contracts) <> encode(extensions.digest((select body from public.contracts), 'sha256'), 'hex') then
+  if (select status from public.contracts) <> 'accepted' or (select accepted_signature from public.contracts) is null
+     or (select accepted_hash from public.contracts) <> encode(extensions.digest((select body from public.contracts), 'sha256'), 'hex') then
     raise exception 'FALLO: evidencia de aceptación';
   end if;
 end $$;

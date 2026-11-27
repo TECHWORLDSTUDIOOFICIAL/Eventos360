@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, Copy, FileSignature, FileText, MessageCircle, Plus, Printer, Search, Send, Trash2, Wallet } from "lucide-react";
+import { ArrowLeft, Check, Copy, FileSignature, FileText, ImagePlus, MessageCircle, Plus, Printer, Search, Send, Trash2, Wallet, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { unwrap } from "@/lib/queries";
-import { useEvents } from "@/lib/events";
-import { QUOTE_STATUS, docNumber, quoteUrl, useCustomers, useQuotes, waNumber, type Quote, type QuoteItem } from "@/lib/pro";
+import { publicMediaUrl, uploadImage, useEvents } from "@/lib/events";
+import { DEFAULT_QUOTE_INTRO, DEFAULT_QUOTE_TERMS, QUOTE_STATUS, QUOTE_TEMPLATES, docNumber, quoteUrl, useCustomers, useQuotes, waNumber, type Quote, type QuoteItem, type QuoteTemplate } from "@/lib/pro";
 import { formatDate, formatMoney } from "@/lib/format";
 import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
-import { Alert, Badge, Button, Card, CardHeader, EmptyState, Field, Input, PageHeader, Select, Spinner, Textarea } from "@/components/ui";
+import { Alert, Badge, Button, Card, CardHeader, EmptyState, Field, Input, PageHeader, Select, Spinner, Textarea, cx } from "@/components/ui";
 import { PaymentDialog } from "./FinancePage";
 
 export default function QuotesPage() {
@@ -74,7 +74,7 @@ function NewQuote() {
   const qc = useQueryClient();
   const { data: customers } = useCustomers(ws.id);
   const { data: events } = useEvents(ws.id);
-  const [f, setF] = useState({ customer_id: params.get("cliente") ?? "", event_id: params.get("evento") ?? "", title: "", currency_code: region.currency_code });
+  const [f, setF] = useState({ customer_id: params.get("cliente") ?? "", event_id: params.get("evento") ?? "", title: "", currency_code: region.currency_code, template: "clasica" as QuoteTemplate });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const evs = (events ?? []).filter((e) => !f.customer_id || e.customer_id === f.customer_id);
@@ -91,7 +91,7 @@ function NewQuote() {
     const valid = new Date(Date.now() + 15 * 86_400_000).toISOString().slice(0, 10);
     const { data, error: err } = await supabase.from("quotes").insert({
       workspace_id: ws.id, customer_id: f.customer_id, event_id: f.event_id || null, title: f.title.trim(), currency_code: f.currency_code,
-      tax_rate: region.tax_rate, valid_until: valid, deposit_pct: 50,
+      tax_rate: region.tax_rate, valid_until: valid, deposit_pct: 50, template: f.template, intro: DEFAULT_QUOTE_INTRO, terms: DEFAULT_QUOTE_TERMS,
     }).select("id").single();
     setBusy(false);
     if (err) return setError(err.message);
@@ -111,6 +111,18 @@ function NewQuote() {
             <Field label="Evento" optional>{(id) => <Select id={id} value={f.event_id} onChange={(e) => setF((s) => ({ ...s, event_id: e.target.value }))}><option value="">Sin evento</option>{evs.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</Select>}</Field>
             <Field label="Título">{(id) => <Input id={id} value={f.title} onChange={(e) => setF((s) => ({ ...s, title: e.target.value }))} placeholder="Ej. Coordinación integral de boda" />}</Field>
             <Field label="Moneda">{(id) => <Select id={id} value={f.currency_code} onChange={(e) => setF((s) => ({ ...s, currency_code: e.target.value }))}><option>NIO</option><option>USD</option></Select>}</Field>
+            <div>
+              <div className="mb-1.5 text-sm font-medium">Diseño</div>
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.keys(QUOTE_TEMPLATES) as QuoteTemplate[]).map((t) => (
+                  <button key={t} type="button" onClick={() => setF((s) => ({ ...s, template: t }))}
+                    className={cx("rounded-xl border p-2 text-left", f.template === t ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-line")}>
+                    <TemplateThumb t={t} /><div className="mt-1.5 text-xs font-semibold">{QUOTE_TEMPLATES[t].name}</div>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-muted">{QUOTE_TEMPLATES[f.template].description}</p>
+            </div>
             {error && <Alert tone="danger">{error}</Alert>}
             <Button type="submit" variant="accent" className="w-full" loading={busy}>Crear y agregar servicios</Button>
           </form>
@@ -149,7 +161,7 @@ function QuoteEditor({ id }: { id: string }) {
     const { error } = await supabase.from("quotes").update({
       title: v.title, event_id: v.event_id || null, issue_date: v.issue_date, valid_until: v.valid_until || null, currency_code: v.currency_code,
       discount_amount: Number(v.discount_amount) || 0, tax_rate: Number(v.tax_rate) || 0, deposit_pct: Number(v.deposit_pct) || 0,
-      terms: v.terms || null, notes: v.notes || null, status: v.status,
+      terms: v.terms || null, notes: v.notes || null, status: v.status, template: v.template, intro: v.intro || null,
     }).eq("id", id);
     if (error) { setMsg({ tone: "danger", text: error.message }); return false; }
     await refresh();
@@ -173,7 +185,20 @@ function QuoteEditor({ id }: { id: string }) {
     if (error) setMsg({ tone: "danger", text: error.message });
     await refresh();
   }
+  async function setLineImage(it: QuoteItem, file: File | null) {
+    try {
+      let path: string | null = null;
+      if (file) path = await uploadImage("event-media", `${ws.id}/cotizaciones/${id}/${crypto.randomUUID()}.webp`, file, 1400);
+      const { error } = await supabase.from("quote_items").update({ image_path: path }).eq("id", it.id);
+      if (error) throw new Error(error.message);
+      if (it.image_path) await supabase.storage.from("event-media").remove([it.image_path]);
+      await refresh();
+    } catch (err) {
+      setMsg({ tone: "danger", text: (err as Error).message });
+    }
+  }
   async function removeLine(it: QuoteItem) {
+    if (it.image_path) await supabase.storage.from("event-media").remove([it.image_path]);
     await supabase.from("quote_items").delete().eq("id", it.id);
     await refresh();
   }
@@ -224,38 +249,43 @@ function QuoteEditor({ id }: { id: string }) {
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <Card>
-          <CardHeader title="Servicios y productos" />
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead className="border-b border-line text-left text-xs uppercase tracking-wider text-muted">
-                <tr><th className="px-4 py-2 font-semibold">Descripción</th><th className="w-20 px-2 py-2 text-right font-semibold">Cant.</th><th className="w-28 px-2 py-2 text-right font-semibold">Precio</th><th className="w-20 px-2 py-2 text-right font-semibold">Desc. %</th><th className="w-28 px-4 py-2 text-right font-semibold">Total</th><th className="w-10" /></tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {(items.data ?? []).map((it) => (
-                  <tr key={it.id}>
-                    <td className="px-4 py-1.5">{locked ? it.description : <Input defaultValue={it.description} className="h-9" aria-label="Descripción" onBlur={(e) => e.target.value.trim() && e.target.value !== it.description && void updateLine(it, { description: e.target.value.trim() })} />}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">{locked ? Number(it.quantity) : <Input type="number" min="0.01" step="0.01" defaultValue={it.quantity} className="h-9 text-right" aria-label="Cantidad" onBlur={(e) => Number(e.target.value) > 0 && Number(e.target.value) !== Number(it.quantity) && void updateLine(it, { quantity: Number(e.target.value) })} />}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">{locked ? money(Number(it.unit_price)) : <Input type="number" min="0" step="0.01" defaultValue={it.unit_price} className="h-9 text-right" aria-label="Precio" onBlur={(e) => Number(e.target.value) !== Number(it.unit_price) && void updateLine(it, { unit_price: Number(e.target.value) || 0 })} />}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">{locked ? Number(it.discount_pct) : <Input type="number" min="0" max="100" defaultValue={it.discount_pct} className="h-9 text-right" aria-label="Descuento" onBlur={(e) => Number(e.target.value) !== Number(it.discount_pct) && void updateLine(it, { discount_pct: Math.min(100, Number(e.target.value) || 0) })} />}</td>
-                    <td className="px-4 py-1.5 text-right font-semibold tabular-nums">{money(Number(it.line_total))}</td>
-                    <td className="pr-3">{!locked && <button onClick={() => void removeLine(it)} className="rounded-lg p-1.5 text-muted hover:text-danger" aria-label="Quitar línea"><Trash2 className="size-4" /></button>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {!locked && (
-            <form onSubmit={addLine} className="grid gap-2 border-t border-line p-4 sm:grid-cols-[1fr_80px_120px_80px_auto]">
-              <Input value={line.description} onChange={(e) => setLine((s) => ({ ...s, description: e.target.value }))} placeholder="Servicio o producto" aria-label="Nueva descripción" />
-              <Input type="number" min="0.01" step="0.01" value={line.quantity} onChange={(e) => setLine((s) => ({ ...s, quantity: e.target.value }))} aria-label="Cantidad" className="text-right" />
-              <Input type="number" min="0" step="0.01" value={line.unit_price} onChange={(e) => setLine((s) => ({ ...s, unit_price: e.target.value }))} placeholder="Precio" aria-label="Precio unitario" className="text-right" />
-              <Input type="number" min="0" max="100" value={line.discount_pct} onChange={(e) => setLine((s) => ({ ...s, discount_pct: e.target.value }))} aria-label="Descuento %" className="text-right" />
-              <Button type="submit" variant="secondary" icon={<Plus className="size-4" />} disabled={!line.description.trim()}>Agregar</Button>
-            </form>
-          )}
-          {!items.data?.length && <p className="px-4 pb-4 text-sm text-muted">Agrega cada servicio con su cantidad y precio unitario.</p>}
-        </Card>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader title="Diseño del documento" description="Cambia el estilo cuando quieras; el contenido se conserva." />
+            <div className="grid gap-2 p-4 sm:grid-cols-3">
+              {(Object.keys(QUOTE_TEMPLATES) as QuoteTemplate[]).map((t) => (
+                <button key={t} type="button" disabled={locked} onClick={() => { set("template", t); void saveHeader({ template: t }); }}
+                  className={cx("rounded-xl border p-3 text-left transition disabled:opacity-60", (f.template ?? q.template) === t ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-line hover:border-line-strong")}>
+                  <TemplateThumb t={t} />
+                  <div className="mt-2 text-sm font-semibold">{QUOTE_TEMPLATES[t].name}</div>
+                  <div className="text-xs leading-snug text-muted">{QUOTE_TEMPLATES[t].description}</div>
+                </button>
+              ))}
+            </div>
+            <div className="border-t border-line p-4">
+              <Field label="Mensaje de introducción" optional hint="Aparece debajo del título.">{(i2, d) => <Textarea id={i2} aria-describedby={d} disabled={locked} value={f.intro ?? ""} onChange={(e) => set("intro", e.target.value)} onBlur={() => void saveHeader()} />}</Field>
+            </div>
+          </Card>
+          <Card>
+            <CardHeader title="Servicios, productos u opciones" description="Agrega fotos para presentar cada opción (por ejemplo, cada decoración con su precio)." />
+            <ul className="divide-y divide-line">
+              {(items.data ?? []).map((it, n) => (
+                <LineEditor key={it.id} it={it} n={n + 1} locked={locked} money={money}
+                  onUpdate={(patch) => updateLine(it, patch)} onRemove={() => removeLine(it)} onImage={(file) => setLineImage(it, file)} />
+              ))}
+            </ul>
+            {!locked && (
+              <form onSubmit={addLine} className="grid gap-2 border-t border-line bg-paper/50 p-4 sm:grid-cols-[1fr_80px_120px_80px_auto]">
+                <Input value={line.description} onChange={(e) => setLine((s) => ({ ...s, description: e.target.value }))} placeholder="Nuevo servicio, producto u opción" aria-label="Nueva descripción" />
+                <Input type="number" min="0.01" step="0.01" value={line.quantity} onChange={(e) => setLine((s) => ({ ...s, quantity: e.target.value }))} aria-label="Cantidad" className="text-right" />
+                <Input type="number" min="0" step="0.01" value={line.unit_price} onChange={(e) => setLine((s) => ({ ...s, unit_price: e.target.value }))} placeholder="Precio" aria-label="Precio unitario" className="text-right" />
+                <Input type="number" min="0" max="100" value={line.discount_pct} onChange={(e) => setLine((s) => ({ ...s, discount_pct: e.target.value }))} aria-label="Descuento %" className="text-right" />
+                <Button type="submit" variant="secondary" icon={<Plus className="size-4" />} disabled={!line.description.trim()}>Agregar</Button>
+              </form>
+            )}
+            {!items.data?.length && <p className="px-4 pb-4 text-sm text-muted">Agrega cada servicio con su cantidad y precio. Luego puedes añadirle foto y descripción.</p>}
+          </Card>
+        </div>
 
         <div className="space-y-6">
           <Card className="p-5">
@@ -295,5 +325,61 @@ function QuoteEditor({ id }: { id: string }) {
       {paying && <PaymentDialog defaults={{ customer_id: q.customer_id, event_id: q.event_id, quote_id: q.id, currency_code: q.currency_code, amount: deposit || undefined }}
         onClose={() => setPaying(false)} onSaved={() => { setPaying(false); setMsg({ tone: "ok", text: "Pago registrado." }); }} />}
     </div>
+  );
+}
+
+/** Miniatura ilustrativa de cada diseño. */
+function TemplateThumb({ t }: { t: QuoteTemplate }) {
+  const bar = <div className="h-1 rounded bg-[var(--accent)]/70" />;
+  return (
+    <div className="aspect-[4/3] overflow-hidden rounded-lg border border-line bg-white p-2">
+      {t === "clasica" && <div className="space-y-1.5">{bar}<div className="h-2 w-1/2 rounded bg-ink/20" /><div className="h-2.5 rounded bg-[var(--accent)]/60" />{[0, 1, 2].map((i) => <div key={i} className="h-1.5 rounded bg-ink/10" />)}</div>}
+      {t === "catalogo" && <div className="space-y-1.5"><div className="h-3 rounded bg-[var(--accent)]/70" />{[0, 1].map((i) => <div key={i} className="flex gap-1.5"><div className="size-6 rounded bg-champagne/60" /><div className="flex-1 space-y-1"><div className="h-1.5 rounded bg-ink/25" /><div className="h-1.5 w-2/3 rounded bg-ink/10" /></div></div>)}</div>}
+      {t === "elegante" && <div className="flex flex-col items-center space-y-1.5"><div className="size-4 rounded-full bg-ink/20" /><div className="h-1.5 w-2/3 rounded bg-ink/25" /><div className="h-px w-full bg-[var(--accent)]/60" />{[0, 1, 2].map((i) => <div key={i} className="h-1.5 w-full rounded bg-ink/10" />)}</div>}
+    </div>
+  );
+}
+
+/** Una línea de la cotización: foto, nombre, descripción, cantidad, precio y descuento. */
+function LineEditor({ it, n, locked, money, onUpdate, onRemove, onImage }: {
+  it: QuoteItem; n: number; locked: boolean; money: (v: number) => string;
+  onUpdate: (patch: Partial<QuoteItem>) => Promise<void>; onRemove: () => Promise<void>; onImage: (file: File | null) => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const img = publicMediaUrl(it.image_path);
+  const num = (v: string) => Number(v);
+  return (
+    <li className="flex gap-3 p-4">
+      <div className="shrink-0">
+        <label className={cx("relative grid size-20 place-items-center overflow-hidden rounded-xl border-2 border-dashed border-line-strong bg-paper text-muted sm:size-24", !locked && "cursor-pointer hover:border-[var(--accent)]")}>
+          {img ? <img src={img} alt="" className="absolute inset-0 size-full object-cover" /> : busy ? <span className="text-xs">Subiendo…</span> : <><ImagePlus className="size-5" /><span className="sr-only">Agregar foto</span></>}
+          {!locked && <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" aria-label={`Foto de la línea ${n}`}
+            onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; setBusy(true); await onImage(f); setBusy(false); }} />}
+        </label>
+        {img && !locked && <button type="button" onClick={() => void onImage(null)} className="mt-1 inline-flex items-center gap-0.5 text-[11px] text-muted hover:text-danger"><X className="size-3" />Quitar foto</button>}
+      </div>
+      <div className="min-w-0 flex-1 space-y-2">
+        {locked ? <div className="font-semibold">{it.description}</div> : (
+          <Input defaultValue={it.description} className="h-9 font-semibold" aria-label="Descripción"
+            onBlur={(e) => e.target.value.trim() && e.target.value !== it.description && void onUpdate({ description: e.target.value.trim() })} />
+        )}
+        {locked ? (it.details && <p className="whitespace-pre-line text-sm text-ink-soft">{it.details}</p>) : (
+          <Textarea defaultValue={it.details ?? ""} placeholder="Descripción detallada (qué incluye, medidas, colores…)" className="min-h-14 text-sm" aria-label="Detalle"
+            onBlur={(e) => e.target.value !== (it.details ?? "") && void onUpdate({ details: e.target.value.trim() || null })} />
+        )}
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          {locked ? <span className="text-muted">{Number(it.quantity)} × {money(Number(it.unit_price))}{Number(it.discount_pct) ? ` · −${Number(it.discount_pct)}%` : ""}</span> : <>
+            <label className="flex items-center gap-1 text-xs text-muted">Cant.<Input type="number" min="0.01" step="0.01" defaultValue={it.quantity} className="h-8 w-20 text-right" aria-label="Cantidad de la línea"
+              onBlur={(e) => num(e.target.value) > 0 && num(e.target.value) !== Number(it.quantity) && void onUpdate({ quantity: num(e.target.value) })} /></label>
+            <label className="flex items-center gap-1 text-xs text-muted">Precio<Input type="number" min="0" step="0.01" defaultValue={it.unit_price} className="h-8 w-28 text-right" aria-label="Precio"
+              onBlur={(e) => num(e.target.value) !== Number(it.unit_price) && void onUpdate({ unit_price: num(e.target.value) || 0 })} /></label>
+            <label className="flex items-center gap-1 text-xs text-muted">Desc. %<Input type="number" min="0" max="100" defaultValue={it.discount_pct} className="h-8 w-16 text-right" aria-label="Descuento"
+              onBlur={(e) => num(e.target.value) !== Number(it.discount_pct) && void onUpdate({ discount_pct: Math.min(100, num(e.target.value) || 0) })} /></label>
+          </>}
+          <span className="ml-auto font-semibold tabular-nums">{money(Number(it.line_total))}</span>
+          {!locked && <button onClick={() => void onRemove()} className="rounded-lg p-1.5 text-muted hover:text-danger" aria-label="Quitar línea"><Trash2 className="size-4" /></button>}
+        </div>
+      </div>
+    </li>
   );
 }

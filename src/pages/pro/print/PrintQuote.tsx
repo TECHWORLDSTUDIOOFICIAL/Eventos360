@@ -8,18 +8,29 @@ import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { PrintLayout, Sheet } from "@/components/PrintLayout";
 import { Spinner } from "@/components/ui";
 import NotFound from "@/pages/NotFound";
-import { DocHeader, QuoteBody } from "./docParts";
+import { QuoteDocument, type DocBusiness } from "./documents";
 
-export interface BizRow { name: string; legal_name: string | null; tax_id: string | null; contact_phone: string | null; contact_email: string | null; address: string | null; logo_path: string | null }
+export interface BizRow {
+  name: string; legal_name: string | null; tax_id: string | null; contact_phone: string | null; contact_email: string | null; address: string | null;
+  logo_path: string | null; brand_color: string | null; signature_path: string | null; signer_name: string | null; signer_title: string | null;
+}
 
 export const useBusiness = (wsId: string) =>
   useQuery({
     queryKey: ["ws-biz-full", wsId],
-    queryFn: async () => unwrap<BizRow>(await supabase.from("workspaces").select("name, legal_name, tax_id, contact_phone, contact_email, address, logo_path").eq("id", wsId).single()),
+    queryFn: async () => unwrap<BizRow>(await supabase.from("workspaces")
+      .select("name, legal_name, tax_id, contact_phone, contact_email, address, logo_path, brand_color, signature_path, signer_name, signer_title").eq("id", wsId).single()),
   });
 
-export const toDocBusiness = (b: BizRow) => ({
-  name: b.legal_name || b.name, tax_id: b.tax_id, phone: b.contact_phone, email: b.contact_email, address: b.address, logo_url: publicMediaUrl(b.logo_path),
+/** Convierte los datos del negocio (de la base o del documento público) al formato de los documentos. */
+export const toDocBusiness = (b: {
+  name: string; legal_name?: string | null; tax_id: string | null; contact_phone?: string | null; phone?: string | null; contact_email?: string | null;
+  email?: string | null; address: string | null; logo_path: string | null; brand_color: string | null; signature_path: string | null;
+  signer_name: string | null; signer_title: string | null;
+}): DocBusiness => ({
+  name: b.legal_name || b.name, tax_id: b.tax_id, phone: b.contact_phone ?? b.phone ?? null, email: b.contact_email ?? b.email ?? null,
+  address: b.address, logo_url: publicMediaUrl(b.logo_path), brand_color: b.brand_color, signature_url: publicMediaUrl(b.signature_path),
+  signer_name: b.signer_name, signer_title: b.signer_title,
 });
 
 export default function PrintQuote({ id }: { id: string }) {
@@ -40,9 +51,9 @@ export default function PrintQuote({ id }: { id: string }) {
   return (
     <PrintLayout title={`Cotización ${docNumber("COT", q.number)}`} backTo={workspacePath(ws.kind, ws.id, `m/quotes/${id}`)} paper="letter">
       <Sheet paper="letter" className="px-10 py-9 print:p-0">
-        <DocHeader business={toDocBusiness(biz.data)} title="Cotización" number={docNumber("COT", q.number)} />
-        <QuoteBody locale={region.locale} timezone={region.timezone}
-          data={{ quote: q, items, customer: q.customers, event: q.events }} />
+        <QuoteDocument business={toDocBusiness(biz.data)} locale={region.locale} timezone={region.timezone}
+          data={{ number: docNumber("COT", q.number), quote: q, customer: q.customers, event: q.events,
+            items: items.map((it) => ({ ...it, image_url: publicMediaUrl(it.image_path) })) }} />
       </Sheet>
     </PrintLayout>
   );

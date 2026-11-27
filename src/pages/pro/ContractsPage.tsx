@@ -5,11 +5,11 @@ import { ArrowLeft, Ban, Copy, FileSignature, MessageCircle, Plus, Printer, Save
 import { supabase } from "@/lib/supabase";
 import { unwrap } from "@/lib/queries";
 import { useEvents } from "@/lib/events";
-import { CONTRACT_STATUS, DEFAULT_CONTRACT, TEMPLATE_VARS, contractUrl, docNumber, fillTemplate, useContracts, useCustomers, useQuotes, waNumber, type Contract } from "@/lib/pro";
+import { CONTRACT_STATUS, CONTRACT_STYLES, CONTRACT_TEMPLATES, DEFAULT_CONTRACT, TEMPLATE_VARS, contractUrl, docNumber, fillTemplate, useContracts, useCustomers, useQuotes, waNumber, type Contract, type ContractStyle } from "@/lib/pro";
 import { formatDate, formatMoney } from "@/lib/format";
 import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
-import { Alert, Badge, Button, Card, CardHeader, Dialog, EmptyState, Field, Input, PageHeader, Select, Spinner, Textarea } from "@/components/ui";
+import { Alert, Badge, Button, Card, CardHeader, Dialog, EmptyState, Field, Input, PageHeader, Select, Spinner, Textarea, cx } from "@/components/ui";
 
 interface Template { id: string; name: string; body: string }
 
@@ -55,7 +55,7 @@ function ContractList() {
             {list.map((k) => (
               <li key={k.id}><Link to={workspacePath(ws.kind, ws.id, `m/contracts/${k.id}`)} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-paper sm:px-5">
                 <span className="w-20 font-mono text-xs text-muted">{docNumber("CON", k.number)}</span>
-                <span className="min-w-0 flex-1"><span className="block truncate font-semibold">{k.title}</span><span className="block truncate text-xs text-muted">{cust(k.customer_id)}{k.accepted_at ? ` · aceptado ${formatDate(k.accepted_at, { timeZone: region.timezone })}` : ""}</span></span>
+                <span className="min-w-0 flex-1"><span className="block truncate font-semibold">{k.title}</span><span className="block truncate text-xs text-muted">{cust(k.customer_id)}{k.accepted_at ? ` · firmado ${formatDate(k.accepted_at, { timeZone: region.timezone })}` : ""}</span></span>
                 {k.amount != null && <span className="tabular-nums">{formatMoney(Number(k.amount), k.currency_code, region.locale)}</span>}
                 <Badge tone={CONTRACT_STATUS[k.status].tone}>{CONTRACT_STATUS[k.status].label}</Badge>
               </Link></li>
@@ -141,7 +141,7 @@ function NewContract() {
   const { data: templates } = useTemplates(ws.id);
   const biz = useQuery({ queryKey: ["ws-biz", ws.id], queryFn: async () => unwrap<{ name: string; legal_name: string | null; tax_id: string | null }>(await supabase.from("workspaces").select("name, legal_name, tax_id").eq("id", ws.id).single()) });
   const fromQuote = quotes?.find((q) => q.id === params.get("cotizacion"));
-  const [f, setF] = useState({ customer_id: params.get("cliente") ?? "", event_id: params.get("evento") ?? "", quote_id: params.get("cotizacion") ?? "", template: "default", title: "Contrato de prestación de servicios" });
+  const [f, setF] = useState({ customer_id: params.get("cliente") ?? "", event_id: params.get("evento") ?? "", quote_id: params.get("cotizacion") ?? "", template: CONTRACT_TEMPLATES[0]!.key, style: "clasica" as ContractStyle, title: "Contrato de prestación de servicios" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => { if (fromQuote) setF((s) => ({ ...s, customer_id: fromQuote.customer_id, event_id: fromQuote.event_id ?? "", quote_id: fromQuote.id })); }, [fromQuote]);
@@ -152,7 +152,7 @@ function NewContract() {
     if (!c) return setError("Elige el cliente.");
     const ev = events?.find((x) => x.id === f.event_id);
     const q = quotes?.find((x) => x.id === f.quote_id);
-    const tpl = f.template === "default" ? DEFAULT_CONTRACT : templates?.find((t) => t.id === f.template)?.body ?? DEFAULT_CONTRACT;
+    const tpl = CONTRACT_TEMPLATES.find((t) => t.key === f.template)?.body ?? templates?.find((t) => t.id === f.template)?.body ?? DEFAULT_CONTRACT;
     const cur = q?.currency_code ?? ev?.currency_code ?? region.currency_code;
     const m = (n: number) => formatMoney(n, cur, region.locale);
     const body = fillTemplate(tpl, {
@@ -166,7 +166,7 @@ function NewContract() {
     setBusy(true);
     const { data, error: err } = await supabase.from("contracts").insert({
       workspace_id: ws.id, customer_id: c.id, event_id: f.event_id || null, quote_id: f.quote_id || null, title: f.title.trim() || "Contrato",
-      body, amount: q ? Number(q.total) : null, currency_code: cur,
+      body, amount: q ? Number(q.total) : null, currency_code: cur, template: f.style,
     }).select("id").single();
     setBusy(false);
     if (err) return setError(err.message);
@@ -182,7 +182,18 @@ function NewContract() {
           <Field label="Cliente">{(id) => <Select id={id} value={f.customer_id} onChange={(e) => setF((s) => ({ ...s, customer_id: e.target.value, event_id: "", quote_id: "" }))}><option value="">Elegir…</option>{(customers ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>}</Field>
           <Field label="Evento" optional>{(id) => <Select id={id} value={f.event_id} onChange={(e) => setF((s) => ({ ...s, event_id: e.target.value }))}><option value="">Sin evento</option>{(events ?? []).filter((e) => e.customer_id === f.customer_id).map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</Select>}</Field>
           <Field label="Cotización" optional hint="Toma el monto y el anticipo de aquí.">{(id, d) => <Select id={id} aria-describedby={d} value={f.quote_id} onChange={(e) => setF((s) => ({ ...s, quote_id: e.target.value }))}><option value="">Ninguna</option>{(quotes ?? []).filter((q) => q.customer_id === f.customer_id).map((q) => <option key={q.id} value={q.id}>{docNumber("COT", q.number)} · {q.title}</option>)}</Select>}</Field>
-          <Field label="Plantilla">{(id) => <Select id={id} value={f.template} onChange={(e) => setF((s) => ({ ...s, template: e.target.value }))}><option value="default">Contrato estándar de Eventos360</option>{(templates ?? []).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>}</Field>
+          <div>
+            <div className="mb-1.5 text-sm font-medium">Tipo de contrato</div>
+            <div className="space-y-2">
+              {[...CONTRACT_TEMPLATES.map((t) => ({ id: t.key, name: t.name, description: t.description })), ...(templates ?? []).map((t) => ({ id: t.id, name: t.name, description: "Tu plantilla" }))].map((t) => (
+                <label key={t.id} className={cx("flex cursor-pointer gap-3 rounded-xl border p-3", f.template === t.id ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-line")}>
+                  <input type="radio" name="tpl" checked={f.template === t.id} onChange={() => setF((s) => ({ ...s, template: t.id, title: CONTRACT_TEMPLATES.find((x) => x.key === t.id)?.name ?? s.title }))} className="mt-1 accent-ink" />
+                  <span><span className="block text-sm font-semibold">{t.name}</span><span className="block text-xs text-muted">{t.description}</span></span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <Field label="Diseño">{(id) => <Select id={id} value={f.style} onChange={(e) => setF((s) => ({ ...s, style: e.target.value as ContractStyle }))}>{(Object.keys(CONTRACT_STYLES) as ContractStyle[]).map((k) => <option key={k} value={k}>{CONTRACT_STYLES[k].name} — {CONTRACT_STYLES[k].description}</option>)}</Select>}</Field>
           <Field label="Título">{(id) => <Input id={id} value={f.title} onChange={(e) => setF((s) => ({ ...s, title: e.target.value }))} />}</Field>
           <Alert tone="info">El contrato estándar es un modelo general. Revísalo y adáptalo a tu negocio; para casos importantes consulta con un abogado.</Alert>
           {error && <Alert tone="danger">{error}</Alert>}
@@ -236,9 +247,9 @@ function ContractEditor({ id }: { id: string }) {
         actions={<>
           <Link to={base(`imprimir/contrato?id=${id}`)}><Button variant="secondary" icon={<Printer className="size-4" />}>PDF</Button></Link>
           {editable && dirty && <Button variant="secondary" icon={<Save className="size-4" />} onClick={() => void update({ body, title: title.trim() || c.title }, "Cambios guardados.")}>Guardar</Button>}
-          {editable && <Button variant="accent" icon={<Send className="size-4" />} onClick={() => void update({ body, title: title.trim() || c.title, status: "sent" }, "Contrato listo: comparte el enlace para que tu cliente lo acepte.")}>Enviar al cliente</Button>}
+          {editable && <Button variant="accent" icon={<Send className="size-4" />} onClick={() => void update({ body, title: title.trim() || c.title, status: "sent" }, "Contrato listo: comparte el enlace para que tu cliente lo firme, o imprímelo para firmarlo en papel.")}>Enviar al cliente</Button>}
           {!readOnly && c.status === "sent" && <Button variant="ghost" onClick={() => void update({ status: "draft" })}>Volver a borrador</Button>}
-          {!readOnly && c.status === "accepted" && <Button variant="ghost" className="text-danger" icon={<Ban className="size-4" />} onClick={() => confirm("¿Cancelar este contrato aceptado? Quedará registrado como cancelado.") && void update({ status: "canceled" })}>Cancelar contrato</Button>}
+          {!readOnly && c.status === "accepted" && <Button variant="ghost" className="text-danger" icon={<Ban className="size-4" />} onClick={() => confirm("¿Cancelar este contrato firmado? Quedará registrado como cancelado.") && void update({ status: "canceled" })}>Cancelar contrato</Button>}
         </>} />
       {msg && <div className="mb-4"><Alert tone={msg.tone} onClose={() => setMsg(null)}>{msg.text}</Alert></div>}
 
@@ -247,7 +258,7 @@ function ContractEditor({ id }: { id: string }) {
           <div className="flex items-start gap-3">
             <ShieldCheck className="mt-0.5 size-5 shrink-0 text-ok" />
             <div className="text-sm">
-              <div className="font-semibold">Aceptado por {c.accepted_name}{c.accepted_id_doc ? ` (identificación ${c.accepted_id_doc})` : ""}</div>
+              <div className="font-semibold">Firmado por {c.accepted_name}{c.accepted_id_doc ? ` (identificación ${c.accepted_id_doc})` : ""}</div>
               <div className="text-ink-soft">{formatDate(c.accepted_at, { timeZone: region.timezone, withTime: true })}{c.accepted_ip ? ` · IP ${c.accepted_ip}` : ""}</div>
               <div className="mt-1 break-all font-mono text-[11px] text-muted">Huella del texto aceptado (SHA-256): {c.accepted_hash}</div>
             </div>
@@ -266,7 +277,15 @@ function ContractEditor({ id }: { id: string }) {
       )}
 
       <Card>
-        <CardHeader title="Texto del contrato" description={editable ? "Puedes editarlo mientras esté en borrador." : "El texto ya no se puede modificar."} />
+        <CardHeader title="Texto del contrato" description={editable ? "Puedes editarlo mientras esté en borrador." : "El texto ya no se puede modificar."}
+          action={!readOnly && c.status !== "canceled" && (
+            <div className="flex flex-wrap items-center gap-3">
+              <Select value={c.template} onChange={(e) => void update({ template: e.target.value as ContractStyle })} className="h-9 w-auto text-sm" aria-label="Diseño del contrato">
+                {(Object.keys(CONTRACT_STYLES) as ContractStyle[]).map((k) => <option key={k} value={k}>Diseño: {CONTRACT_STYLES[k].name}</option>)}
+              </Select>
+              <label className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={c.include_provider_signature} onChange={(e) => void update({ include_provider_signature: e.target.checked })} className="size-4 accent-ink" />Incluir mi firma</label>
+            </div>
+          )} />
         <div className="space-y-3 p-4">
           {editable && <Field label="Título">{(i) => <Input id={i} value={title} onChange={(e) => setTitle(e.target.value)} />}</Field>}
           {editable ? <Textarea value={body} onChange={(e) => setBody(e.target.value)} className="min-h-[28rem] font-[inherit] text-[14px] leading-relaxed" aria-label="Texto del contrato" />
