@@ -24,7 +24,7 @@ function endTime(t: string, min: number | null) {
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
-function Schedule({ event, events, select }: { event: EventRow; events: EventRow[]; select: (id: string) => void }) {
+export function Schedule({ event, events, select }: { event: EventRow; events: EventRow[]; select: (id: string) => void }) {
   const { ws, readOnly } = useWorkspace();
   const [editing, setEditing] = useState<ScheduleItem | "new" | null>(null);
   const { data, isLoading } = useQuery({
@@ -37,7 +37,7 @@ function Schedule({ event, events, select }: { event: EventRow; events: EventRow
       <PageHeader title="Cronograma" description="El minuto a minuto del gran día: qué pasa, a qué hora y quién se encarga."
         actions={<>
           <EventSwitcher events={events} current={event} onSelect={select} />
-          {!!data?.length && <Link to={workspacePath(ws.kind, ws.id, "imprimir/cronograma")}><Button variant="secondary" icon={<Printer className="size-4" />}>Imprimir</Button></Link>}
+          {!!data?.length && <Link to={workspacePath(ws.kind, ws.id, `imprimir/cronograma?evento=${event.id}`)}><Button variant="secondary" icon={<Printer className="size-4" />}>Imprimir</Button></Link>}
           {!readOnly && <Button variant="accent" icon={<Plus className="size-4" />} onClick={() => setEditing("new")}>Agregar actividad</Button>}
         </>} />
       {isLoading ? <Spinner /> : !data?.length ? (

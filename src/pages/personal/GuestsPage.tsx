@@ -10,7 +10,7 @@ export default function GuestsPage() {
   return <EventGate>{(ctx) => <Guests {...ctx} />}</EventGate>;
 }
 
-function Guests({ event, events, select }: { event: EventRow; events: EventRow[]; select: (id: string) => void }) {
+export function Guests({ event, events, select }: { event: EventRow; events: EventRow[]; select: (id: string) => void }) {
   const { readOnly } = useWorkspace();
   const { data: guests, isLoading } = useGuests(event.id);
   const { data: groups } = useGuestGroups(event.id);

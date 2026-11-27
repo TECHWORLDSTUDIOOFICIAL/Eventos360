@@ -22,7 +22,7 @@ export default function InvitationsPage() {
   return <EventGate>{(ctx) => <Invitations {...ctx} />}</EventGate>;
 }
 
-function Invitations({ event, events, select }: { event: EventRow; events: EventRow[]; select: (id: string) => void }) {
+export function Invitations({ event, events, select }: { event: EventRow; events: EventRow[]; select: (id: string) => void }) {
   const { ws, region, readOnly } = useWorkspace();
   const qc = useQueryClient();
   const inv = useQuery({
@@ -73,7 +73,7 @@ function Invitations({ event, events, select }: { event: EventRow; events: Event
         actions={<>
           <EventSwitcher events={events} current={event} onSelect={select} />
           {published ? <Badge tone="ok" className="h-8 px-3">Publicada</Badge> : <Badge tone="neutral" className="h-8 px-3">Borrador</Badge>}
-          <Link to={workspacePath(ws.kind, ws.id, "imprimir/invitaciones")}><Button variant="secondary" icon={<Printer className="size-4" />}>Imprimir invitaciones</Button></Link>
+          <Link to={workspacePath(ws.kind, ws.id, `imprimir/invitaciones?evento=${event.id}`)}><Button variant="secondary" icon={<Printer className="size-4" />}>Imprimir invitaciones</Button></Link>
         </>} />
       {msg && <div className="mb-4"><Alert tone={msg.tone} onClose={() => setMsg(null)}>{msg.text}</Alert></div>}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
