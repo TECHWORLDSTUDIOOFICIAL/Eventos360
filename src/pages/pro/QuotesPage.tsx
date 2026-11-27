@@ -158,9 +158,11 @@ function QuoteEditor({ id }: { id: string }) {
   async function addLine(e: FormEvent) {
     e.preventDefault();
     if (!line.description.trim()) return;
+    const { data: last } = await supabase.from("quote_items").select("sort").eq("quote_id", id).order("sort", { ascending: false }).limit(1);
+    const nextSort = ((last?.[0] as { sort: number } | undefined)?.sort ?? 0) + 1;
     const { error } = await supabase.from("quote_items").insert({
       workspace_id: ws.id, quote_id: id, description: line.description.trim(), quantity: Number(line.quantity) || 1,
-      unit_price: Number(line.unit_price) || 0, discount_pct: Number(line.discount_pct) || 0, sort: (items.data?.length ?? 0) + 1,
+      unit_price: Number(line.unit_price) || 0, discount_pct: Number(line.discount_pct) || 0, sort: nextSort,
     });
     if (error) return setMsg({ tone: "danger", text: error.message });
     setLine({ description: "", quantity: "1", unit_price: "", discount_pct: "0" });

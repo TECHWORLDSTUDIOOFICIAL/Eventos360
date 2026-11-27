@@ -186,7 +186,7 @@ function NewContract() {
           <Field label="Título">{(id) => <Input id={id} value={f.title} onChange={(e) => setF((s) => ({ ...s, title: e.target.value }))} />}</Field>
           <Alert tone="info">El contrato estándar es un modelo general. Revísalo y adáptalo a tu negocio; para casos importantes consulta con un abogado.</Alert>
           {error && <Alert tone="danger">{error}</Alert>}
-          <Button type="submit" variant="accent" className="w-full" loading={busy} disabled={!f.customer_id}>Generar contrato</Button>
+          <Button type="submit" variant="accent" className="w-full" loading={busy || biz.isLoading} disabled={!f.customer_id || !biz.data || !quotes || !events}>Generar contrato</Button>
         </form>
       </Card>
     </div>

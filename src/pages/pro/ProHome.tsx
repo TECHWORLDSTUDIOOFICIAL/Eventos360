@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { unwrap } from "@/lib/queries";
 import { useAuth } from "@/lib/auth";
 import { useEvents } from "@/lib/events";
-import { useCustomers } from "@/lib/pro";
+import { useCustomers, usePayments, useQuotes } from "@/lib/pro";
 import { formatDate, formatMoney } from "@/lib/format";
 import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
@@ -29,9 +29,25 @@ export default function ProHome() {
     queryFn: async () => unwrap<Dash>(await supabase.rpc("pro_dashboard", { p_ws: ws.id, p_from: from, p_to: to })),
   });
   const { data: events } = useEvents(ws.id);
+  const { data: payments } = usePayments(ws.id);
+  const { data: quotes } = useQuotes(ws.id);
+  // Montos separados por moneda (nunca se suman córdobas con dólares).
+  const byCurrency = (rows: { currency_code: string; amount: number }[]) => {
+    const m = new Map<string, number>();
+    for (const r of rows) m.set(r.currency_code, (m.get(r.currency_code) ?? 0) + Number(r.amount));
+    return m;
+  };
+  const fmtMap = (m: Map<string, number>) => {
+    const parts = [...m.entries()].filter(([, v]) => Math.abs(v) >= 0.005).map(([c, v]) => formatMoney(v, c, region.locale));
+    return parts.length ? parts.join(" · ") : formatMoney(0, region.currency_code, region.locale);
+  };
+  const monthIncome = byCurrency((payments ?? []).filter((p) => p.paid_at >= from && p.paid_at <= to));
+  const contracted = byCurrency((quotes ?? []).filter((q) => q.status === "accepted").map((q) => ({ currency_code: q.currency_code, amount: Number(q.total) })));
+  const received = byCurrency(payments ?? []);
+  const receivable = new Map<string, number>();
+  for (const [c, v] of contracted) receivable.set(c, Math.max(0, v - (received.get(c) ?? 0)));
   const { data: customers } = useCustomers(ws.id);
   const base = (p: string) => workspacePath(ws.kind, ws.id, p);
-  const money = (n: number) => formatMoney(n, region.currency_code, region.locale);
   const upcoming = (events ?? []).filter((e) => e.starts_at && new Date(e.starts_at).getTime() >= Date.now() - 86_400_000 && e.status !== "canceled").slice(0, 6);
   const cust = (id: string | null | undefined) => customers?.find((c) => c.id === id)?.name;
   const monthName = new Intl.DateTimeFormat(region.locale, { month: "long" }).format(now);
@@ -46,12 +62,11 @@ export default function ProHome() {
       {isLoading || !d ? <Spinner /> : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label={`Cobrado en ${monthName}`} value={<span className="text-2xl">{money(d.income_period)}</span>} hint={`Moneda principal: ${region.currency_code}`} icon={<Wallet className="size-4" />} />
-            <Stat label="Por cobrar" value={<span className="text-2xl">{money(Math.max(0, d.contracted_total - d.received_total))}</span>} hint="Contratado menos cobrado" />
-            <Stat label="Cotizaciones enviadas" value={d.quotes_sent} hint={d.quotes_sent ? `${money(d.quotes_sent_total)} en espera de respuesta` : "Ninguna pendiente"} icon={<FileText className="size-4" />} />
+            <Stat label={`Cobrado en ${monthName}`} value={<span className="text-2xl">{fmtMap(monthIncome)}</span>} hint="Pagos recibidos de clientes" icon={<Wallet className="size-4" />} />
+            <Stat label="Por cobrar" value={<span className="text-2xl">{fmtMap(receivable)}</span>} hint="Cotizaciones aceptadas menos lo cobrado" />
+            <Stat label="Cotizaciones enviadas" value={d.quotes_sent} hint={d.quotes_sent ? `${fmtMap(byCurrency((quotes ?? []).filter((q) => q.status === "sent").map((q) => ({ currency_code: q.currency_code, amount: Number(q.total) }))))} en espera de respuesta` : "Ninguna pendiente"} icon={<FileText className="size-4" />} />
             <Stat label="Próximos eventos" value={d.events_upcoming} hint={`${d.customers_active} clientes activos · ${d.customers_leads} prospectos`} icon={<CalendarRange className="size-4" />} />
           </div>
-          <p className="mt-2 text-xs text-muted">Los montos suman en la moneda principal del espacio; si trabajas en C$ y US$, revisa Finanzas por moneda.</p>
           <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
             <Card>
               <CardHeader title="Próximos eventos" action={<Link to={base("m/events")} className="text-sm font-semibold text-[var(--accent)]">Ver todos</Link>} />

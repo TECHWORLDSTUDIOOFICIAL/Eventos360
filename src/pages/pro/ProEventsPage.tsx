@@ -264,8 +264,10 @@ function EventSummary({ event }: { event: EventRow }) {
   const contracted = accepted.reduce((a, q) => a + Number(q.total), 0);
   const received = (payments ?? []).reduce((a, p) => a + Number(p.amount), 0);
   const costs = s?.committed_total ?? 0;
-  const profit = contracted - costs;
-  const margin = contracted > 0 ? Math.round((profit / contracted) * 100) : null;
+  // Costos (moneda del evento) y contratado (moneda de la cotización) solo se restan si es la misma moneda.
+  const sameCurrency = cur === event.currency_code || costs === 0;
+  const profit = sameCurrency ? contracted - costs : null;
+  const margin = profit !== null && contracted > 0 ? Math.round((profit / contracted) * 100) : null;
 
   return (
     <div className="space-y-6">
@@ -273,8 +275,8 @@ function EventSummary({ event }: { event: EventRow }) {
         {[
           { l: "Contratado", v: money(contracted), h: `${accepted.length} cotización(es) aceptada(s)` },
           { l: "Cobrado", v: money(received), h: contracted ? `Saldo ${money(Math.max(0, contracted - received))}` : "Registra pagos en Finanzas" },
-          { l: "Costos", v: money(costs), h: `Pagado a proveedores ${money(s?.paid_total ?? 0)}` },
-          { l: "Ganancia estimada", v: money(profit), h: margin === null ? "Sin monto contratado" : `Margen ${margin}%`, warn: profit < 0 },
+          { l: "Costos", v: money(costs, event.currency_code), h: `Pagado a proveedores ${money(s?.paid_total ?? 0, event.currency_code)}` },
+          { l: "Ganancia estimada", v: profit === null ? "—" : money(profit), h: profit === null ? "Monedas distintas: no se puede calcular" : margin === null ? "Sin monto contratado" : `Margen ${margin}%`, warn: profit !== null && profit < 0 },
         ].map((x) => (
           <Card key={x.l} className="p-4">
             <div className="text-xs text-muted">{x.l}</div>
@@ -283,7 +285,7 @@ function EventSummary({ event }: { event: EventRow }) {
           </Card>
         ))}
       </div>
-      {cur !== event.currency_code && costs > 0 && <Alert tone="info">La cotización está en {cur} y los costos en {event.currency_code}. Usa la misma moneda en ambos para que la ganancia sea exacta.</Alert>}
+      {!sameCurrency && <Alert tone="warn">La cotización está en {cur} y los costos del evento en {event.currency_code}. Para calcular la ganancia, cambia la moneda del evento (Editar) a {cur} y registra los costos en esa moneda.</Alert>}
       <div className="grid gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader title="Cotizaciones" action={!readOnly && <Link to={base(`m/quotes/nueva?cliente=${event.customer_id ?? ""}&evento=${event.id}`)} className="text-sm font-semibold text-[var(--accent)]">+ Nueva</Link>} />

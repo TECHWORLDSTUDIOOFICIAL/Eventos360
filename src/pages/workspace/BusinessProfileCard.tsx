@@ -5,20 +5,24 @@ import { supabase } from "@/lib/supabase";
 import { publicMediaUrl, uploadImage } from "@/lib/events";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { useBusiness } from "@/pages/pro/print/PrintQuote";
-import { Alert, Button, Card, CardHeader, Field, Input } from "@/components/ui";
+import { Alert, Button, Card, CardHeader, Field, Input, Spinner } from "@/components/ui";
 
 /** Datos del negocio que aparecen en cotizaciones y contratos. */
 export default function BusinessProfileCard() {
   const { ws, readOnly } = useWorkspace();
   const qc = useQueryClient();
-  const { data } = useBusiness(ws.id);
+  const { data, isLoading } = useBusiness(ws.id);
   const fileRef = useRef<HTMLInputElement>(null);
   const [f, setF] = useState({ legal_name: "", tax_id: "", contact_phone: "", contact_email: "", address: "" });
   const [logo, setLogo] = useState<File | null>(null);
   const [msg, setMsg] = useState<{ tone: "ok" | "danger"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  // Se inicializa una sola vez: una recarga de datos no debe borrar lo que el usuario está escribiendo.
+  const loaded = useRef(false);
   useEffect(() => {
-    if (data) setF({ legal_name: data.legal_name ?? "", tax_id: data.tax_id ?? "", contact_phone: data.contact_phone ?? "", contact_email: data.contact_email ?? "", address: data.address ?? "" });
+    if (data && !loaded.current) loaded.current = true;
+    else return;
+    setF({ legal_name: data.legal_name ?? "", tax_id: data.tax_id ?? "", contact_phone: data.contact_phone ?? "", contact_email: data.contact_email ?? "", address: data.address ?? "" });
   }, [data]);
   const set = (k: keyof typeof f, v: string) => setF((s) => ({ ...s, [k]: v }));
   const preview = logo ? URL.createObjectURL(logo) : publicMediaUrl(data?.logo_path);
@@ -48,7 +52,7 @@ export default function BusinessProfileCard() {
   return (
     <Card className="mt-6 max-w-2xl">
       <CardHeader title="Datos del negocio" description="Aparecen en el encabezado de tus cotizaciones y contratos." />
-      <form onSubmit={save} className="space-y-4 px-5 py-5">
+      {isLoading ? <Spinner /> : <form onSubmit={save} className="space-y-4 px-5 py-5">
         <fieldset disabled={readOnly} className="space-y-4">
           <div className="flex items-center gap-4">
             <button type="button" onClick={() => fileRef.current?.click()} className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-xl border-2 border-dashed border-line-strong bg-paper text-muted hover:border-[var(--accent)]" aria-label="Subir logo">
@@ -67,7 +71,7 @@ export default function BusinessProfileCard() {
         </fieldset>
         {msg && <Alert tone={msg.tone}>{msg.text}</Alert>}
         {!readOnly && <div className="flex justify-end"><Button type="submit" loading={busy}>Guardar datos del negocio</Button></div>}
-      </form>
+      </form>}
     </Card>
   );
 }
