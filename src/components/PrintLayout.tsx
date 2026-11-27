@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { Link } from "react-router";
+import { useNavigate } from "react-router";
 import { ArrowLeft, Printer } from "lucide-react";
 import { Button } from "./ui";
 
@@ -19,14 +19,15 @@ export function PrintLayout({ title, backTo, paper, controls, children }: {
   title: string; backTo: string; paper: Paper; controls?: ReactNode; children: ReactNode;
 }) {
   const p = PAPERS[paper];
+  const navigate = useNavigate();
   return (
     <div className="-mx-4 -my-8 min-h-dvh bg-[#e9e4db] sm:-mx-8 print:m-0 print:min-h-0 print:bg-white">
       <style>{`@page { size: ${p.size}; margin: ${p.margin}; }`}</style>
       <div className="sticky top-0 z-20 border-b border-line bg-card/95 px-4 py-3 backdrop-blur print:hidden sm:px-8">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3">
-          <Link to={backTo} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-muted hover:bg-ink/5 hover:text-ink">
+          <button onClick={() => (window.history.length > 1 ? navigate(-1) : navigate(backTo))} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-muted hover:bg-ink/5 hover:text-ink">
             <ArrowLeft className="size-4" /> Volver
-          </Link>
+          </button>
           <h1 className="mr-auto font-semibold">{title}</h1>
           {controls}
           <Button variant="accent" icon={<Printer className="size-4" />} onClick={() => window.print()}>Imprimir / PDF</Button>

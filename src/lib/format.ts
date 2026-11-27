@@ -5,7 +5,9 @@ export const DEFAULT_TIMEZONE = "America/Managua";
 export function formatMoney(amount: number | string | null | undefined, currency = "NIO", locale = DEFAULT_LOCALE): string {
   const n = typeof amount === "string" ? Number(amount) : amount ?? 0;
   try {
-    return new Intl.NumberFormat(locale, { style: "currency", currency, currencyDisplay: "narrowSymbol" }).format(n);
+    const out = new Intl.NumberFormat(locale, { style: "currency", currency, currencyDisplay: "narrowSymbol" }).format(n);
+    // En Nicaragua "$" a secas es ambiguo junto a "C$": los dólares se muestran como "US$".
+    return currency === "USD" ? out.replace(/(^|[^A-Z])\$/, "$1US$") : out;
   } catch {
     return `${currency} ${n.toFixed(2)}`;
   }

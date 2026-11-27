@@ -6,6 +6,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { Alert, Button, Card, CardHeader, Field, Input, PageHeader, Select, Spinner } from "@/components/ui";
 import NotFound from "@/pages/NotFound";
+import BusinessProfileCard from "./BusinessProfileCard";
 
 interface WsRow { id: string; name: string; currency_code: string; timezone: string; locale: string; tax_rate: number; country_code: string }
 
@@ -92,6 +93,7 @@ export default function WorkspaceSettings() {
           <div className="flex justify-end"><Button type="submit" loading={busy} disabled={readOnly}>Guardar cambios</Button></div>
         </form>
       </Card>
+      {ws.kind !== "personal" && <BusinessProfileCard />}
     </div>
   );
 }

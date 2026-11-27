@@ -8,6 +8,7 @@ export interface EventRow {
   starts_at: string | null; ends_at: string | null; venue_name: string | null; venue_address: string | null;
   venue_map_url: string | null; budget: number; currency_code: string; description: string | null;
   cover_path: string | null; status: "planning" | "confirmed" | "done" | "canceled"; created_at: string;
+  customer_id?: string | null; guests_estimate?: number | null;
 }
 
 export interface GuestRow {

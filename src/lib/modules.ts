@@ -71,12 +71,13 @@ export const SPECIALTY_ICONS: Record<string, LucideIcon> = {
 /** Módulos ya implementados por modalidad (el resto indica su etapa). */
 const IMPLEMENTED: Record<string, string[]> = {
   personal: ["home", "my_event", "guests", "invitations", "budget", "suppliers", "seating", "schedule", "tasks", "inspiration"],
+  professional: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget"],
 };
 
 export function moduleMeta(key: string, kind?: string): ModuleMeta {
   const base = MODULES[key] ?? m(Package, "", 9);
   if (kind && IMPLEMENTED[kind]?.includes(key)) return { ...base, stage: null };
   // En Profesional/Business los módulos de eventos se construyen en la etapa 3.
-  if (kind && kind !== "personal" && key !== "dashboard" && (base.stage === null || base.stage <= 2)) return { ...base, stage: 3 };
+  if (kind === "business" && key !== "dashboard" && (base.stage === null || base.stage <= 3)) return { ...base, stage: 4 };
   return base;
 }

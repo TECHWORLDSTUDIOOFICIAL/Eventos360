@@ -16,6 +16,21 @@ export const MODULE_PAGES: Partial<Record<WorkspaceKind, Record<string, Page>>> 
     tasks: lazy(() => import("@/pages/personal/TasksPage")),
     inspiration: lazy(() => import("@/pages/personal/InspirationPage")),
   },
+  professional: {
+    customers: lazy(() => import("@/pages/pro/CustomersPage")),
+    events: lazy(() => import("@/pages/pro/ProEventsPage")),
+    quotes: lazy(() => import("@/pages/pro/QuotesPage")),
+    contracts: lazy(() => import("@/pages/pro/ContractsPage")),
+    calendar: lazy(() => import("@/pages/pro/CalendarPage")),
+    finance: lazy(() => import("@/pages/pro/FinancePage")),
+    suppliers: lazy(() => import("@/pages/personal/SuppliersPage")),
+    tasks: lazy(() => import("@/pages/pro/ProTasksPage")),
+  },
+};
+
+/** En Profesional, estos módulos viven dentro de cada evento (no en el menú principal). */
+export const EVENT_SCOPED: Partial<Record<WorkspaceKind, string[]>> = {
+  professional: ["guests", "invitations", "seating", "schedule", "budget"],
 };
 
 export const modulePage = (kind: WorkspaceKind, key: string): Page | undefined => MODULE_PAGES[kind]?.[key];

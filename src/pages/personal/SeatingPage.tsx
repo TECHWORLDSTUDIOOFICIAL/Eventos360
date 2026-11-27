@@ -15,7 +15,7 @@ export default function SeatingPage() {
   return <EventGate>{(ctx) => <Seating {...ctx} />}</EventGate>;
 }
 
-function Seating({ event, events, select }: { event: EventRow; events: EventRow[]; select: (id: string) => void }) {
+export function Seating({ event, events, select }: { event: EventRow; events: EventRow[]; select: (id: string) => void }) {
   const { ws, readOnly } = useWorkspace();
   const [view, setView] = useState<"list" | "map">(() => { try { return (localStorage.getItem("e360:seating-view") as "list" | "map") || "list"; } catch { return "list"; } });
   const changeView = (v: "list" | "map") => { setView(v); try { localStorage.setItem("e360:seating-view", v); } catch { /* opcional */ } };
@@ -57,7 +57,7 @@ function Seating({ event, events, select }: { event: EventRow; events: EventRow[
               </button>
             ))}
           </div>
-          {!!tables?.length && <Link to={workspacePath(ws.kind, ws.id, "imprimir/mesas")}><Button variant="secondary" icon={<Printer className="size-4" />}>Imprimir</Button></Link>}
+          {!!tables?.length && <Link to={workspacePath(ws.kind, ws.id, `imprimir/mesas?evento=${event.id}`)}><Button variant="secondary" icon={<Printer className="size-4" />}>Imprimir</Button></Link>}
           {!readOnly && <Button variant="accent" icon={<Plus className="size-4" />} onClick={() => setEditing("new")}>Agregar mesas</Button>}
         </>} />
       {needed > totalSeats && (tables?.length ?? 0) > 0 && <div className="mb-4"><Alert tone="warn">Faltan {needed - totalSeats} lugares para todas las personas invitadas.</Alert></div>}

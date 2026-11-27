@@ -34,7 +34,7 @@ export default function BudgetPage() {
   return <EventGate>{(ctx) => <Budget {...ctx} />}</EventGate>;
 }
 
-function Budget({ event, events, select }: { event: EventRow; events: EventRow[]; select: (id: string) => void }) {
+export function Budget({ event, events, select }: { event: EventRow; events: EventRow[]; select: (id: string) => void }) {
   const { region, readOnly } = useWorkspace();
   const { data, isLoading } = useExpenses(event.id);
   const { data: suppliers } = useSuppliers();

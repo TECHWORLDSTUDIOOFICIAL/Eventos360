@@ -21,7 +21,7 @@ export default function TasksPage() {
   return <EventGate>{(ctx) => <Tasks {...ctx} />}</EventGate>;
 }
 
-function Tasks({ event, events, select }: { event: EventRow; events: EventRow[]; select: (id: string) => void }) {
+export function Tasks({ event, events, select }: { event: EventRow; events: EventRow[]; select: (id: string) => void }) {
   const { ws, readOnly } = useWorkspace();
   const invalidate = useInvalidateEvent();
   const [filter, setFilter] = useState<"open" | "done" | "all">("open");

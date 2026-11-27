@@ -12,6 +12,7 @@ import type { MyWorkspace, WorkspaceKind, WorkspaceModule } from "@/lib/types";
 import { Logo } from "@/components/Logo";
 import { Alert, FullPageSpinner, cx } from "@/components/ui";
 import NotFound from "@/pages/NotFound";
+import { EVENT_SCOPED } from "@/pages/workspace/moduleRegistry";
 
 export interface WorkspaceRegion { timezone: string; locale: string; currency_code: string; tax_rate: number }
 
@@ -56,7 +57,8 @@ export default function WorkspaceShell({ kind }: { kind: WorkspaceKind }) {
   const left = daysUntil(ws.period_end);
   const renewWa = whatsappLink(settings, `Hola, quiero renovar mi plan de ${meta.product} (${ws.name}).`);
   const homeKey = kind === "personal" ? "home" : "dashboard";
-  const navModules = (modules ?? []).filter((m) => m.module_key !== homeKey);
+  const hidden = EVENT_SCOPED[kind] ?? [];
+  const navModules = (modules ?? []).filter((m) => m.module_key !== homeKey && !hidden.includes(m.module_key));
   const homeLabel = modules?.find((m) => m.module_key === homeKey)?.label ?? "Inicio";
   const HomeIcon = moduleMeta(homeKey).icon;
 

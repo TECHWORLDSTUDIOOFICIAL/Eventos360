@@ -33,6 +33,8 @@ describe("formatos regionales", () => {
     expect(formatMoney(1250.5, "NIO")).toContain("1");
     expect(formatMoney(1250.5, "NIO")).toMatch(/C\$|NIO/);
     expect(formatMoney(19.99, "USD")).toMatch(/19[.,]99/);
+    expect(formatMoney(19.99, "USD")).toContain("US$");
+    expect(formatMoney(-5, "USD")).toContain("US$");
   });
   it("calcula días restantes", () => {
     const now = new Date("2026-01-01T12:00:00Z");
