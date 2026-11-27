@@ -58,8 +58,8 @@ function GenericHome() {
       </div>
 
       <div className="mt-6">
-        <Alert tone="info" title="Eventos360 está en construcción por etapas">
-          Tu cuenta, tu plan y tu configuración ya están activos. Los módulos se habilitan progresivamente; cada uno indica en qué etapa estará disponible.
+        <Alert tone="info" title="Algunas herramientas de tu especialidad están en preparación">
+          Las que ya funcionan están en tu menú. Las marcadas como "Próximamente" aparecerán solas cuando estén listas; no tienes que hacer nada.
         </Alert>
       </div>
 
@@ -76,7 +76,7 @@ function GenericHome() {
                   <span className="min-w-0">
                     <span className="flex items-center gap-2 text-sm font-semibold">
                       {m.label}
-                      {info.stage !== null && <Badge tone="neutral" className="font-medium">Etapa {info.stage}</Badge>}
+                      {info.stage !== null && <Badge tone="neutral" className="font-medium">Próximamente</Badge>}
                     </span>
                     <span className="mt-0.5 block text-xs leading-relaxed text-muted">{info.description}</span>
                   </span>

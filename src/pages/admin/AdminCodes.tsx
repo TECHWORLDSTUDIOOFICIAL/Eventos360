@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, Copy, KeyRound, MessageCircle, Plus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
-import { unwrap, useSpecialties } from "@/lib/queries";
+import { unwrap, useSpecialties, useSpecialtyModules } from "@/lib/queries";
+import { isModuleReady } from "@/lib/modules";
 import { formatDate, formatMoney } from "@/lib/format";
 import { MODALITIES } from "@/lib/modalities";
 import type { AccessCodePurpose, Plan, WorkspaceKind } from "@/lib/types";
@@ -118,6 +119,7 @@ function NewCodeDialog({ plans, isOwner, onClose, onCreated }: {
   plans: Plan[]; isOwner: boolean; onClose: () => void;
   onCreated: (c: { code: string; purpose: AccessCodePurpose; plan?: string; kind?: WorkspaceKind }) => void;
 }) {
+  const { data: specMods } = useSpecialtyModules();
   const { data: specialties } = useSpecialties();
   const [purpose, setPurpose] = useState<AccessCodePurpose>("signup");
   const [kind, setKind] = useState<WorkspaceKind>("personal");
@@ -222,7 +224,11 @@ function NewCodeDialog({ plans, isOwner, onClose, onCreated }: {
                     return (
                       <button key={s.key} type="button" onClick={() => setSpecs((c) => (on ? c.filter((k) => k !== s.key) : [...c, s.key]))}
                         className={cx("rounded-full border px-3 py-1 text-xs font-semibold", on ? "border-business bg-business text-white" : "border-line bg-card text-ink-soft")}>
-                        {specs.indexOf(s.key) === 0 && "★ "}{s.name}
+                        {specs.indexOf(s.key) === 0 && "★ "}{s.name}{(() => {
+                          const mods = (specMods ?? []).filter((m) => m.specialty_key === s.key);
+                          const ready = mods.filter((m) => isModuleReady(m.module_key, "business")).length;
+                          return mods.length ? (ready === mods.length ? " · completa" : ` · ${ready}/${mods.length} listas`) : "";
+                        })()}
                       </button>
                     );
                   })}

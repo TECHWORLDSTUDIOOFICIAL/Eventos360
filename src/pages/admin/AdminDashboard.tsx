@@ -68,7 +68,7 @@ export default function AdminDashboard() {
             <Stat label="Ingreso recurrente mensual (estimado)" value={<span className="text-2xl">{moneyList(data.mrr_by_currency)}</span>}
               hint="Precio de cada plan activo normalizado a 30 días" />
             <Stat label="Pagos registrados (30 días)" value={<span className="text-2xl">{moneyList(data.payments_30d_by_currency)}</span>}
-              hint={`ARR estimado: ${Object.entries(data.mrr_by_currency).map(([c, v]) => formatMoney(v * 12, c)).join(" · ") || formatMoney(0, "USD")}`} />
+              hint={`Proyección a un año: ${Object.entries(data.mrr_by_currency).map(([c, v]) => formatMoney(v * 12, c)).join(" · ") || formatMoney(0, "USD")}`} />
           </div>
           <div className="mt-6 grid gap-4 lg:grid-cols-3">
             <Card><CardHeader title="Por modalidad" /><Bars data={data.by_kind as Record<string, number>} labels={(k) => MODALITIES[k as WorkspaceKind]?.short ?? k} /></Card>

@@ -67,7 +67,8 @@ export default function CalendarPage() {
   });
   const today = localParts(new Date().toISOString(), region.timezone).date;
   const byDay = (d: string) => entries.filter((x) => x.date === d);
-  const monthLabel = new Intl.DateTimeFormat(region.locale, { month: "long", year: "numeric" }).format(cursor);
+  const monthRaw = new Intl.DateTimeFormat(region.locale, { month: "long", year: "numeric" }).format(cursor);
+  const monthLabel = monthRaw.charAt(0).toUpperCase() + monthRaw.slice(1);   // "Noviembre de 2026"
   const conflicts = entries.filter((x) => x.conflict && x.date.startsWith(`${year}-${String(month + 1).padStart(2, "0")}`));
   const upcoming = entries.filter((x) => x.date >= today).slice(0, 8);
   const dayList = selectedDay ? byDay(selectedDay) : [];
@@ -81,7 +82,7 @@ export default function CalendarPage() {
         <Card className="overflow-hidden">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <button onClick={() => setCursor(new Date(year, month - 1, 1))} className="rounded-lg p-2 hover:bg-ink/5" aria-label="Mes anterior"><ChevronLeft className="size-5" /></button>
-            <div className="font-display text-xl font-semibold capitalize">{monthLabel}</div>
+            <div className="font-display text-xl font-semibold">{monthLabel}</div>
             <button onClick={() => setCursor(new Date(year, month + 1, 1))} className="rounded-lg p-2 hover:bg-ink/5" aria-label="Mes siguiente"><ChevronRight className="size-5" /></button>
           </div>
           <div className="grid grid-cols-7 border-b border-line bg-paper text-center text-[11px] font-semibold uppercase tracking-wider text-muted">

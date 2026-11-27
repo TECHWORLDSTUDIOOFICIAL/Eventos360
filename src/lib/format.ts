@@ -35,3 +35,6 @@ export function daysUntil(value: string | Date | null | undefined, now: Date = n
   const d = typeof value === "string" ? new Date(value) : value;
   return Math.ceil((d.getTime() - now.getTime()) / 86_400_000);
 }
+
+/** Singular o plural según la cantidad: plural(1, "tarea", "tareas") → "1 tarea". */
+export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;

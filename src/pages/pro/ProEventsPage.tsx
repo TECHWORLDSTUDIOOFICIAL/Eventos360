@@ -5,7 +5,7 @@ import { AlertTriangle, ArrowLeft, CalendarDays, CalendarRange, MapPin, Pencil, 
 import { supabase } from "@/lib/supabase";
 import { EVENT_CATEGORIES, fromLocalInput, toLocalInput, useEventSummary, useEvents, type EventRow } from "@/lib/events";
 import { CONTRACT_STATUS, QUOTE_STATUS, docNumber, useContracts, useCustomers, usePayments, useQuotes } from "@/lib/pro";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, plural } from "@/lib/format";
 import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { Guests } from "@/pages/personal/GuestsPage";
@@ -169,9 +169,9 @@ export function ProEventDialog({ event, defaultCustomer, onClose, onSaved }: { e
         <Field label="Dirección" optional>{(id) => <Input id={id} value={f.venue_address} onChange={(e) => set("venue_address", e.target.value)} />}</Field>
         <Field label="Enlace de Google Maps" optional>{(id) => <Input id={id} value={f.venue_map_url} onChange={(e) => set("venue_map_url", e.target.value)} placeholder="https://…" />}</Field>
         <Field label="Invitados estimados" optional>{(id) => <Input id={id} type="number" min={0} value={f.guests_estimate} onChange={(e) => set("guests_estimate", e.target.value)} />}</Field>
-        <div className="grid grid-cols-[1fr_100px] gap-2">
+        <div className="grid grid-cols-[1fr_150px] gap-2">
           <Field label="Presupuesto del cliente" optional>{(id) => <Input id={id} type="number" min={0} step="0.01" value={f.budget} onChange={(e) => set("budget", e.target.value)} />}</Field>
-          <Field label="Moneda">{(id) => <Select id={id} value={f.currency_code} onChange={(e) => set("currency_code", e.target.value)}><option>NIO</option><option>USD</option></Select>}</Field>
+          <Field label="Moneda">{(id) => <Select id={id} value={f.currency_code} onChange={(e) => set("currency_code", e.target.value)}><option value="NIO">Córdobas (C$)</option><option value="USD">Dólares (US$)</option></Select>}</Field>
         </div>
         <Field label="Estado">{(id) => <Select id={id} value={f.status} onChange={(e) => set("status", e.target.value)}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</Select>}</Field>
         <div className="sm:col-span-2"><Field label="Notas" optional>{(id) => <Textarea id={id} value={f.description} onChange={(e) => set("description", e.target.value)} />}</Field></div>
@@ -273,7 +273,7 @@ function EventSummary({ event }: { event: EventRow }) {
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
-          { l: "Contratado", v: money(contracted), h: `${accepted.length} cotización(es) aceptada(s)` },
+          { l: "Contratado", v: money(contracted), h: plural(accepted.length, "cotización aceptada", "cotizaciones aceptadas") },
           { l: "Cobrado", v: money(received), h: contracted ? `Saldo ${money(Math.max(0, contracted - received))}` : "Registra pagos en Finanzas" },
           { l: "Costos", v: money(costs, event.currency_code), h: `Pagado a proveedores ${money(s?.paid_total ?? 0, event.currency_code)}` },
           { l: "Ganancia estimada", v: profit === null ? "—" : money(profit), h: profit === null ? "Monedas distintas: no se puede calcular" : margin === null ? "Sin monto contratado" : `Margen ${margin}%`, warn: profit !== null && profit < 0 },

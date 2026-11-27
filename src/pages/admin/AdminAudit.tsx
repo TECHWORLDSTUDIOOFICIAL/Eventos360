@@ -20,7 +20,20 @@ const LABELS: Record<string, string> = {
   "user.password_reset": "Restableció una contraseña",
   "user.disabled": "Bloqueó un usuario",
   "user.enabled": "Desbloqueó un usuario",
+  "quote.accepted_by_customer": "Un cliente aceptó una cotización",
+  "quote.rejected_by_customer": "Un cliente rechazó una cotización",
+  "contract.accepted_by_customer": "Un cliente aceptó un contrato",
+  "contract.signed_by_customer": "Un cliente firmó un contrato",
+  "rental.returned": "Registró la devolución de una reservación",
+  "team.member_added": "Agregó un usuario a su equipo",
+  "team.member_removed": "Quitó un usuario de su equipo",
+  "team.role_changed": "Cambió el rol de un usuario de su equipo",
+  "team.password_reset": "Restableció la contraseña de un usuario de su equipo",
+  "team.member_disabled": "Bloqueó a un usuario de su equipo",
+  "team.member_enabled": "Reactivó a un usuario de su equipo",
 };
+/** Acciones aún no traducidas: se muestran legibles en lugar del código interno. */
+const label = (a: string) => LABELS[a] ?? a.replace(/[._]/g, " ");
 
 interface LogRow { id: number; action: string; entity: string; created_at: string; details: Record<string, unknown>; profiles: { username: string } | null; workspaces: { name: string } | null }
 
@@ -38,7 +51,7 @@ export default function AdminAudit() {
             {data.map((l) => (
               <li key={l.id} className="flex flex-wrap items-baseline justify-between gap-2 px-5 py-3 text-sm">
                 <div className="min-w-0">
-                  <span className="font-medium">{LABELS[l.action] ?? l.action}</span>
+                  <span className="font-medium">{label(l.action)}</span>
                   {l.workspaces?.name && <span className="text-muted"> · {l.workspaces.name}</span>}
                   <div className="text-xs text-muted">{l.profiles?.username ? `@${l.profiles.username}` : "Sistema"}</div>
                 </div>

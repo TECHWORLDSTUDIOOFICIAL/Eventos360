@@ -6,10 +6,11 @@ import { unwrap } from "@/lib/queries";
 import { useAuth } from "@/lib/auth";
 import { useEvents } from "@/lib/events";
 import { useCustomers, usePayments, useQuotes } from "@/lib/pro";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, plural } from "@/lib/format";
 import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { Button, Card, CardHeader, PageHeader, Spinner, Stat, cx } from "@/components/ui";
+import { GettingStarted } from "@/components/GettingStarted";
 
 interface Dash {
   customers_active: number; customers_leads: number; events_upcoming: number; quotes_sent: number; quotes_sent_total: number;
@@ -59,9 +60,10 @@ export default function ProHome() {
           <Link to={base("m/customers")}><Button variant="secondary" icon={<UserPlus className="size-4" />}>Cliente</Button></Link>
           <Link to={base("m/quotes/nueva")}><Button variant="accent" icon={<Plus className="size-4" />}>Cotización</Button></Link>
         </>} />
+      <GettingStarted variant="pro" />
       {isLoading || !d ? <Spinner /> : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             <Stat label={`Cobrado en ${monthName}`} value={<span className="text-2xl">{fmtMap(monthIncome)}</span>} hint="Pagos recibidos de clientes" icon={<Wallet className="size-4" />} />
             <Stat label="Por cobrar" value={<span className="text-2xl">{fmtMap(receivable)}</span>} hint="Cotizaciones aceptadas menos lo cobrado" />
             <Stat label="Cotizaciones enviadas" value={d.quotes_sent} hint={d.quotes_sent ? `${fmtMap(byCurrency((quotes ?? []).filter((q) => q.status === "sent").map((q) => ({ currency_code: q.currency_code, amount: Number(q.total) }))))} en espera de respuesta` : "Ninguna pendiente"} icon={<FileText className="size-4" />} />
@@ -85,10 +87,10 @@ export default function ProHome() {
               <CardHeader title="Pendientes" />
               <ul className="divide-y divide-line">
                 {[
-                  { n: d.followups_due, l: "seguimiento(s) de clientes para hoy o vencidos", to: "m/calendar", warn: d.followups_due > 0 },
-                  { n: d.contracts_pending, l: "contrato(s) sin aceptar", to: "m/contracts", icon: FileSignature },
-                  { n: d.quotes_sent, l: "cotización(es) esperando respuesta", to: "m/quotes" },
-                  { n: d.tasks_overdue, l: `tarea(s) vencida(s) de ${d.tasks_open} abiertas`, to: "m/events", warn: d.tasks_overdue > 0 },
+                  { n: d.followups_due, l: d.followups_due === 1 ? "cliente por contactar (hoy o atrasado)" : "clientes por contactar (hoy o atrasados)", to: "m/calendar", warn: d.followups_due > 0 },
+                  { n: d.contracts_pending, l: d.contracts_pending === 1 ? "contrato esperando firma" : "contratos esperando firma", to: "m/contracts", icon: FileSignature },
+                  { n: d.quotes_sent, l: d.quotes_sent === 1 ? "cotización esperando respuesta" : "cotizaciones esperando respuesta", to: "m/quotes" },
+                  { n: d.tasks_overdue, l: `${d.tasks_overdue === 1 ? "tarea atrasada" : "tareas atrasadas"} (de ${plural(d.tasks_open, "pendiente", "pendientes")})`, to: "m/tasks", warn: d.tasks_overdue > 0 },
                 ].map((x) => (
                   <li key={x.l}><Link to={base(x.to)} className="flex items-center gap-3 px-5 py-3 text-sm hover:bg-paper">
                     <span className={cx("grid size-8 shrink-0 place-items-center rounded-lg font-display text-base font-semibold", x.warn ? "bg-warn-soft text-warn" : "bg-[var(--accent-soft)] text-[var(--accent)]")}>{x.n}</span>

@@ -237,12 +237,12 @@ export function Dialog({ open, onClose, title, children, footer, wide }: { open:
 // ------------------------------------------------------------------ Stat
 export function Stat({ label, value, hint, icon }: { label: string; value: ReactNode; hint?: ReactNode; icon?: ReactNode }) {
   return (
-    <Card className="p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="text-sm font-medium text-muted">{label}</div>
-        {icon && <div className="text-faint">{icon}</div>}
+    <Card className="p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-[13px] font-medium leading-snug text-muted sm:text-sm">{label}</div>
+        {icon && <div className="hidden text-faint sm:block">{icon}</div>}
       </div>
-      <div className="mt-2 font-display text-3xl font-semibold tabular-nums text-ink">{value}</div>
+      <div className="mt-2 break-words font-display text-2xl font-semibold tabular-nums text-ink sm:text-3xl">{value}</div>
       {hint && <div className="mt-1 text-xs text-muted">{hint}</div>}
     </Card>
   );

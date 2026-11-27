@@ -4,7 +4,7 @@ import { ArrowRight, CalendarDays, CheckCircle2, MapPin } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { unwrap } from "@/lib/queries";
 import { EVENT_CATEGORIES, publicMediaUrl, useEventSummary, type EventRow } from "@/lib/events";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, plural } from "@/lib/format";
 import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { EventGate, EventSwitcher } from "@/components/EventGate";
@@ -82,7 +82,7 @@ function Home({ event, events, select }: { event: EventRow; events: EventRow[]; 
             line={`Pagado ${money(s.paid_total)} · Pendiente ${money(Math.max(0, committed - s.paid_total))}`} pct={pct}
             pctLabel={budget ? `${pct}% del presupuesto` : "Define tu presupuesto en Mi evento"} warn={budget > 0 && committed > budget} />
           <Metric to={has("tasks") ? `${base}/m/tasks` : undefined} title="Tareas" big={`${s.tasks_done}/${s.tasks_total}`} unit="completadas"
-            line={s.tasks_overdue ? `${s.tasks_overdue} tarea(s) vencida(s)` : "Sin tareas vencidas"} pct={taskPct} pctLabel={`${taskPct}% de avance`} warn={s.tasks_overdue > 0} />
+            line={s.tasks_overdue ? plural(s.tasks_overdue, "tarea atrasada", "tareas atrasadas") : "Sin tareas atrasadas"} pct={taskPct} pctLabel={`${taskPct}% de avance`} warn={s.tasks_overdue > 0} />
         </div>
       )}
 

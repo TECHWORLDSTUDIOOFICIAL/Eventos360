@@ -10,8 +10,12 @@ import BusinessProfileCard from "./BusinessProfileCard";
 
 interface WsRow { id: string; name: string; currency_code: string; timezone: string; locale: string; tax_rate: number; country_code: string }
 
-const TIMEZONES = ["America/Managua", "America/Costa_Rica", "America/Tegucigalpa", "America/El_Salvador", "America/Guatemala",
-  "America/Panama", "America/Mexico_City", "America/Bogota", "America/Lima", "America/Santo_Domingo", "America/New_York", "Europe/Madrid"];
+const TIMEZONES: Record<string, string> = {
+  "America/Managua": "Nicaragua (Managua)", "America/Costa_Rica": "Costa Rica (San José)", "America/Tegucigalpa": "Honduras (Tegucigalpa)",
+  "America/El_Salvador": "El Salvador (San Salvador)", "America/Guatemala": "Guatemala", "America/Panama": "Panamá",
+  "America/Mexico_City": "México (Ciudad de México)", "America/Bogota": "Colombia (Bogotá)", "America/Lima": "Perú (Lima)",
+  "America/Santo_Domingo": "República Dominicana", "America/New_York": "Estados Unidos (Este)", "Europe/Madrid": "España (Madrid)",
+};
 const LOCALES = [{ v: "es-NI", l: "Español (Nicaragua)" }, { v: "es-CR", l: "Español (Costa Rica)" }, { v: "es-HN", l: "Español (Honduras)" },
   { v: "es-MX", l: "Español (México)" }, { v: "es-CO", l: "Español (Colombia)" }, { v: "es-ES", l: "Español (España)" }, { v: "en-US", l: "English (US)" }];
 
@@ -71,17 +75,19 @@ export default function WorkspaceSettings() {
                 </Select>
               )}
             </Field>
-            <Field label="Impuesto por defecto (%)" hint="Se aplicará a cotizaciones cuando corresponda.">
-              {(id, d) => <Input id={id} aria-describedby={d} type="number" min={0} max={100} step="0.01" value={form.tax_rate} onChange={(e) => set("tax_rate", Number(e.target.value))} disabled={readOnly} />}
-            </Field>
-            <Field label="Zona horaria" hint={`Ahora: ${formatDate(new Date(), { timeZone: form.timezone, locale: form.locale, withTime: true })}`}>
+            {ws.kind !== "personal" && (
+              <Field label="IVA por defecto (%)" hint="Se propone al crear cotizaciones y reservaciones. En Nicaragua es 15%.">
+                {(id, d) => <Input id={id} aria-describedby={d} type="number" min={0} max={100} step="0.01" value={form.tax_rate} onChange={(e) => set("tax_rate", Number(e.target.value))} disabled={readOnly} />}
+              </Field>
+            )}
+            <Field label="Zona horaria" hint={`Hora actual: ${formatDate(new Date(), { timeZone: form.timezone, locale: form.locale, withTime: true })}`}>
               {(id, d) => (
                 <Select id={id} aria-describedby={d} value={form.timezone} onChange={(e) => set("timezone", e.target.value)} disabled={readOnly}>
-                  {Array.from(new Set([form.timezone, ...TIMEZONES])).map((t) => <option key={t} value={t}>{t.replace("_", " ")}</option>)}
+                  {Array.from(new Set([form.timezone, ...Object.keys(TIMEZONES)])).map((t) => <option key={t} value={t}>{TIMEZONES[t] ?? t.replace(/_/g, " ")}</option>)}
                 </Select>
               )}
             </Field>
-            <Field label="Formato regional">
+            <Field label="Formato de fechas y números">
               {(id) => (
                 <Select id={id} value={form.locale} onChange={(e) => set("locale", e.target.value)} disabled={readOnly}>
                   {LOCALES.map((l) => <option key={l.v} value={l.v}>{l.l}</option>)}

@@ -185,9 +185,9 @@ function ResourceDialog({ resource, categories, onClose }: { resource: Resource 
           <Field label="Código" optional>{(id) => <Input id={id} value={f.sku} onChange={(e) => set("sku", e.target.value)} placeholder="Ej. SIL-TIF-01" />}</Field>
           <Field label="Cantidad total" hint="Todas las unidades que tienes, incluidas las que estén alquiladas.">{(id, d) => <Input id={id} aria-describedby={d} type="number" min={0} step={1} inputMode="numeric" value={f.total_qty} onChange={(e) => set("total_qty", e.target.value)} />}</Field>
           <Field label="Unidad">{(id) => <Select id={id} value={f.unit} onChange={(e) => set("unit", e.target.value)}>{UNITS.map((u) => <option key={u}>{u}</option>)}</Select>}</Field>
-          <div className="grid grid-cols-[1fr_90px] gap-2">
+          <div className="grid grid-cols-[1fr_150px] gap-2">
             <Field label="Precio de alquiler">{(id) => <Input id={id} type="number" min={0} step="0.01" inputMode="decimal" value={f.rent_price} onChange={(e) => set("rent_price", e.target.value)} />}</Field>
-            <Field label="Moneda">{(id) => <Select id={id} value={f.currency_code} onChange={(e) => set("currency_code", e.target.value)}><option>NIO</option><option>USD</option></Select>}</Field>
+            <Field label="Moneda">{(id) => <Select id={id} value={f.currency_code} onChange={(e) => set("currency_code", e.target.value)}><option value="NIO">Córdobas (C$)</option><option value="USD">Dólares (US$)</option></Select>}</Field>
           </div>
           <Field label="Costo de reposición" optional hint="Lo que cobras si se pierde o se daña.">{(id, d) => <Input id={id} aria-describedby={d} type="number" min={0} step="0.01" inputMode="decimal" value={f.replacement_cost} onChange={(e) => set("replacement_cost", e.target.value)} />}</Field>
           <div className="sm:col-span-2"><Field label="Descripción" optional hint="Medidas, color, material. Aparece en cotizaciones.">{(id, d) => <Textarea id={id} aria-describedby={d} value={f.description} onChange={(e) => set("description", e.target.value)} />}</Field></div>

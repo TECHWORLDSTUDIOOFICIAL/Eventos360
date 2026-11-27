@@ -11,6 +11,7 @@ import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { Alert, Button, Card, CardHeader, PageHeader, Spinner, Stat, cx } from "@/components/ui";
 import { RentalStatusBadge } from "./rentalShared";
+import { GettingStarted } from "@/components/GettingStarted";
 
 interface Dash {
   resources: number; units: number; deliveries_today: number; deliveries_overdue: number; deliveries_week: number;
@@ -52,9 +53,7 @@ export default function BusinessHome() {
           {!readOnly && has("reservations") && <Link to={base("m/reservations/nueva")}><Button variant="accent" icon={<Plus className="size-4" />}>Reservación</Button></Link>}
         </>} />
 
-      {d.resources === 0 && has("inventory") && (
-        <div className="mb-6"><Alert tone="info" title="Empieza por tu inventario">Registra tus artículos (o impórtalos desde Excel) con su cantidad total. Después crea reservaciones y el sistema cuidará que nunca apartes más de lo que tienes. <Link to={base("m/inventory")} className="font-semibold underline">Ir a Inventario</Link></Alert></div>
-      )}
+      <GettingStarted variant="rental" />
       {(shortages?.length ?? 0) > 0 && (
         <div className="mb-6"><Alert tone="danger" title="Reservaciones sin unidades suficientes">
           Por daños, bajas o cambios de inventario, estas reservaciones apartadas ya no tienen todo lo que necesitan:
@@ -66,7 +65,7 @@ export default function BusinessHome() {
         </Alert></div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Stat label="Entregas hoy" value={d.deliveries_today} icon={<Truck className="size-4" />}
           hint={d.deliveries_overdue ? <span className="font-semibold text-danger">{d.deliveries_overdue} atrasada{d.deliveries_overdue === 1 ? "" : "s"}</span> : `${d.deliveries_week} en los próximos 7 días`} />
         <Stat label="Por devolver" value={d.returns_pending} icon={<RotateCcw className="size-4" />}

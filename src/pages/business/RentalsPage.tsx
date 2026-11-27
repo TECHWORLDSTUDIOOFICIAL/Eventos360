@@ -187,7 +187,7 @@ function NewRental() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Modalidad">{(id) => <Select id={id} value={f.delivery_mode} onChange={(e) => set("delivery_mode", e.target.value)}><option value="delivery">Entregamos y recogemos</option><option value="pickup">El cliente retira y devuelve</option></Select>}</Field>
-              <Field label="Moneda">{(id) => <Select id={id} value={f.currency_code} onChange={(e) => set("currency_code", e.target.value)}><option>NIO</option><option>USD</option></Select>}</Field>
+              <Field label="Moneda">{(id) => <Select id={id} value={f.currency_code} onChange={(e) => set("currency_code", e.target.value)}><option value="NIO">Córdobas (C$)</option><option value="USD">Dólares (US$)</option></Select>}</Field>
             </div>
             {f.delivery_mode === "delivery" && <Field label="Dirección de entrega" optional>{(id) => <Input id={id} value={f.delivery_address} onChange={(e) => set("delivery_address", e.target.value)} />}</Field>}
             {error && <Alert tone="danger">{error}</Alert>}
@@ -337,7 +337,7 @@ function RentalEditor({ id }: { id: string }) {
               <Field label="Descuento">{(i) => <Input id={i} type="number" min={0} step="0.01" value={f.discount_amount ?? 0} onChange={(e) => set("discount_amount", e.target.value)} onBlur={() => void saveHeader()} />}</Field>
               <Field label="IVA %">{(i) => <Input id={i} type="number" min={0} max={100} step="0.01" value={f.tax_rate ?? 0} onChange={(e) => set("tax_rate", e.target.value)} onBlur={() => void saveHeader()} />}</Field>
               <Field label="Anticipo %">{(i) => <Input id={i} type="number" min={0} max={100} value={f.advance_pct ?? 0} onChange={(e) => set("advance_pct", e.target.value)} onBlur={() => void saveHeader()} />}</Field>
-              <Field label="Moneda">{(i) => <Select id={i} value={f.currency_code ?? "NIO"} disabled={r.status !== "draft" && r.status !== "reserved"} onChange={(e) => { set("currency_code", e.target.value); void save({ currency_code: e.target.value }); }}><option>NIO</option><option>USD</option></Select>}</Field>
+              <Field label="Moneda">{(i) => <Select id={i} value={f.currency_code ?? "NIO"} disabled={r.status !== "draft" && r.status !== "reserved"} onChange={(e) => { set("currency_code", e.target.value); void save({ currency_code: e.target.value }); }}><option value="NIO">Córdobas (C$)</option><option value="USD">Dólares (US$)</option></Select>}</Field>
             </fieldset>
           </Card>
           <DepositCard rental={r} money={money} readOnly={readOnly} onSave={save} />

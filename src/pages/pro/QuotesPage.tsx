@@ -111,7 +111,7 @@ function NewQuote() {
             <Field label="Cliente">{(id) => <Select id={id} value={f.customer_id} onChange={(e) => setF((s) => ({ ...s, customer_id: e.target.value, event_id: "" }))}><option value="">Elegir…</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>}</Field>
             <Field label="Evento" optional>{(id) => <Select id={id} value={f.event_id} onChange={(e) => setF((s) => ({ ...s, event_id: e.target.value }))}><option value="">Sin evento</option>{evs.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</Select>}</Field>
             <Field label="Título">{(id) => <Input id={id} value={f.title} onChange={(e) => setF((s) => ({ ...s, title: e.target.value }))} placeholder="Ej. Coordinación integral de boda" />}</Field>
-            <Field label="Moneda">{(id) => <Select id={id} value={f.currency_code} onChange={(e) => setF((s) => ({ ...s, currency_code: e.target.value }))}><option>NIO</option><option>USD</option></Select>}</Field>
+            <Field label="Moneda">{(id) => <Select id={id} value={f.currency_code} onChange={(e) => setF((s) => ({ ...s, currency_code: e.target.value }))}><option value="NIO">Córdobas (C$)</option><option value="USD">Dólares (US$)</option></Select>}</Field>
             <div>
               <div className="mb-1.5 text-sm font-medium">Diseño</div>
               <div className="grid grid-cols-3 gap-2">
@@ -323,7 +323,7 @@ function QuoteEditor({ id }: { id: string }) {
                 <Field label="Descuento global">{(i) => <Input id={i} type="number" min={0} step="0.01" value={f.discount_amount ?? 0} onChange={(e) => set("discount_amount", e.target.value)} onBlur={() => void saveHeader()} />}</Field>
                 <Field label="IVA %">{(i) => <Input id={i} type="number" min={0} max={100} step="0.01" value={f.tax_rate ?? 0} onChange={(e) => set("tax_rate", e.target.value)} onBlur={() => void saveHeader()} />}</Field>
                 <Field label="Anticipo %">{(i) => <Input id={i} type="number" min={0} max={100} value={f.deposit_pct ?? 0} onChange={(e) => set("deposit_pct", e.target.value)} onBlur={() => void saveHeader()} />}</Field>
-                <Field label="Moneda">{(i) => <Select id={i} value={f.currency_code ?? "NIO"} onChange={(e) => { set("currency_code", e.target.value); void saveHeader({ currency_code: e.target.value }); }}><option>NIO</option><option>USD</option></Select>}</Field>
+                <Field label="Moneda">{(i) => <Select id={i} value={f.currency_code ?? "NIO"} onChange={(e) => { set("currency_code", e.target.value); void saveHeader({ currency_code: e.target.value }); }}><option value="NIO">Córdobas (C$)</option><option value="USD">Dólares (US$)</option></Select>}</Field>
               </div>
               <Field label="Términos y condiciones" optional>{(i) => <Textarea id={i} value={f.terms ?? ""} onChange={(e) => set("terms", e.target.value)} onBlur={() => void saveHeader()} placeholder="Forma de pago, qué incluye, política de cancelación…" className="min-h-28" />}</Field>
               <Field label="Notas internas" optional hint="No aparecen en el documento.">{(i, d) => <Textarea id={i} aria-describedby={d} value={f.notes ?? ""} onChange={(e) => set("notes", e.target.value)} onBlur={() => void saveHeader()} />}</Field>

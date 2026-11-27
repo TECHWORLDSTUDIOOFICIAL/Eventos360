@@ -22,10 +22,8 @@ export default function ModulePage() {
     <div className="animate-rise">
       <PageHeader title={mod.label} description={info.description} />
       <Card>
-        <EmptyState icon={info.stage === null ? <Icon className="size-6" /> : <Construction className="size-6" />} title="Módulo en desarrollo">
-          {info.stage !== null
-            ? `Este módulo está planificado para la etapa ${info.stage} del desarrollo de Eventos360. Ya forma parte de tu plan y aparecerá aquí cuando esté listo.`
-            : "Este módulo estará disponible pronto."}
+        <EmptyState icon={info.stage === null ? <Icon className="size-6" /> : <Construction className="size-6" />} title="Próximamente">
+          Esta herramienta ya forma parte de tu plan y aparecerá en tu menú en cuanto esté lista. No tienes que hacer nada.
         </EmptyState>
       </Card>
     </div>

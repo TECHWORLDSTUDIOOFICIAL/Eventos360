@@ -161,9 +161,9 @@ function EventDialog({ event, onClose, onSaved }: { event: EventRow | null; onCl
           <Field label="Lugar" optional>{(id) => <Input id={id} value={f.venue_name} onChange={(e) => set("venue_name", e.target.value)} placeholder="Ej. Salón Las Palmas" />}</Field>
           <Field label="Dirección" optional>{(id) => <Input id={id} value={f.venue_address} onChange={(e) => set("venue_address", e.target.value)} />}</Field>
           <div className="sm:col-span-2"><Field label="Enlace de Google Maps" optional hint="Aparece como botón “Cómo llegar” en la invitación.">{(id, d) => <Input id={id} aria-describedby={d} value={f.venue_map_url} onChange={(e) => set("venue_map_url", e.target.value)} placeholder="https://maps.app.goo.gl/…" />}</Field></div>
-          <div className="grid grid-cols-[1fr_100px] gap-2">
+          <div className="grid grid-cols-[1fr_150px] gap-2">
             <Field label="Presupuesto estimado">{(id) => <Input id={id} type="number" min={0} step="0.01" inputMode="decimal" value={f.budget} onChange={(e) => set("budget", e.target.value)} />}</Field>
-            <Field label="Moneda">{(id) => <Select id={id} value={f.currency_code} onChange={(e) => set("currency_code", e.target.value)}><option>NIO</option><option>USD</option></Select>}</Field>
+            <Field label="Moneda">{(id) => <Select id={id} value={f.currency_code} onChange={(e) => set("currency_code", e.target.value)}><option value="NIO">Córdobas (C$)</option><option value="USD">Dólares (US$)</option></Select>}</Field>
           </div>
           <Field label="Estado">{(id) => <Select id={id} value={f.status} onChange={(e) => set("status", e.target.value)}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</Select>}</Field>
           <div className="sm:col-span-2"><Field label="Descripción" optional>{(id) => <Textarea id={id} value={f.description} onChange={(e) => set("description", e.target.value)} />}</Field></div>

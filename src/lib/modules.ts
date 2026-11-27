@@ -82,3 +82,22 @@ export function moduleMeta(key: string, kind?: string): ModuleMeta {
   if (kind && base.stage === null) return { ...base, stage: 5 };   // existe en otra modalidad, aquí aún no
   return base;
 }
+
+/** ¿El módulo ya funciona en esta modalidad? (los pendientes no se muestran en el menú). */
+export const isModuleReady = (key: string, kind: string) => moduleMeta(key, kind).stage === null;
+
+/** Funciones del plan que ya existen en el sistema, por modalidad. Las demás se muestran como "próximamente" solo al administrador. */
+const ALL = ["personal", "professional", "business"];
+export const FEATURE_AVAILABLE: Record<string, string[]> = {
+  "events.max": ALL, "guests.max": ALL, "invitations.digital": ALL, "exports.excel": ALL, "exports.pdf": ALL,
+  "customers.max": ["professional", "business"], "members.max": ["business"], "resources.max": ["business"], "specialties.max": ["business"],
+};
+export const featureReady = (key: string, kind?: string) => !!FEATURE_AVAILABLE[key] && (!kind || FEATURE_AVAILABLE[key]!.includes(kind));
+
+/** Secciones del menú (Profesional y Business) para que sea fácil encontrar cada herramienta. */
+export const NAV_GROUPS: { title: string; keys: string[] }[] = [
+  { title: "Operación", keys: ["reservations", "deliveries", "returns", "availability", "events", "calendar", "tasks", "schedule", "guests", "seating", "invitations", "installations", "orders", "sessions", "shifts", "venues", "menus"] },
+  { title: "Ventas", keys: ["customers", "quotes", "contracts", "packages", "catalog", "venue_rates"] },
+  { title: "Inventario", keys: ["inventory", "maintenance", "ingredients", "deliverables", "portfolio"] },
+  { title: "Administración", keys: ["finance", "suppliers", "workforce", "reports", "team", "budget"] },
+];

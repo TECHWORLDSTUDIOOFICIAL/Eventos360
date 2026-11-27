@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { unwrap, useMyWorkspaces, usePlatformSettings, useWorkspaceModules, whatsappLink } from "@/lib/queries";
 import { MODALITIES, workspacePath } from "@/lib/modalities";
-import { moduleMeta } from "@/lib/modules";
+import { NAV_GROUPS, isModuleReady, moduleMeta } from "@/lib/modules";
 import { daysUntil, formatDate } from "@/lib/format";
 import type { MyWorkspace, WorkspaceKind, WorkspaceModule } from "@/lib/types";
 import { Logo } from "@/components/Logo";
@@ -60,8 +60,12 @@ export default function WorkspaceShell({ kind }: { kind: WorkspaceKind }) {
   const renewWa = whatsappLink(settings, `Hola, quiero renovar mi plan de ${meta.product} (${ws.name}).`);
   const homeKey = kind === "personal" ? "home" : "dashboard";
   const hidden = EVENT_SCOPED[kind] ?? [];
-  const navModules = (modules ?? []).filter((m) => m.module_key !== homeKey && !hidden.includes(m.module_key));
-  const homeLabel = modules?.find((m) => m.module_key === homeKey)?.label ?? "Inicio";
+  // El menú muestra solo herramientas que ya funcionan; en Profesional y Business, agrupadas por secciones.
+  const navModules = (modules ?? []).filter((m) => m.module_key !== homeKey && !hidden.includes(m.module_key) && isModuleReady(m.module_key, kind));
+  const sections = kind === "personal" ? [{ title: "", items: navModules }]
+    : [...NAV_GROUPS.map((g) => ({ title: g.title, items: navModules.filter((m) => g.keys.includes(m.module_key)) })),
+       { title: "Más", items: navModules.filter((m) => !NAV_GROUPS.some((g) => g.keys.includes(m.module_key))) }].filter((s) => s.items.length);
+  const homeLabel = "Inicio";
   const HomeIcon = moduleMeta(homeKey).icon;
 
   const linkCls = ({ isActive }: { isActive: boolean }) =>
@@ -83,15 +87,20 @@ export default function WorkspaceShell({ kind }: { kind: WorkspaceKind }) {
       </Link>
       <div className="flex-1 space-y-0.5 overflow-y-auto px-3 pb-4">
         <NavLink to={base} end className={linkCls}><HomeIcon className="size-[18px]" />{homeLabel}</NavLink>
-        {navModules.map((m) => {
-          const Icon = moduleMeta(m.module_key).icon;
-          return (
-            <NavLink key={m.module_key} to={`${base}/m/${m.module_key}`} className={linkCls}>
-              <Icon className="size-[18px]" />
-              <span className="truncate">{m.label}</span>
-            </NavLink>
-          );
-        })}
+        {sections.map((s) => (
+          <div key={s.title || "main"} className={s.title ? "pt-3" : ""}>
+            {s.title && <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-faint">{s.title}</div>}
+            {s.items.map((m) => {
+              const Icon = moduleMeta(m.module_key).icon;
+              return (
+                <NavLink key={m.module_key} to={`${base}/m/${m.module_key}`} className={linkCls}>
+                  <Icon className="size-[18px]" />
+                  <span className="truncate">{m.label}</span>
+                </NavLink>
+              );
+            })}
+          </div>
+        ))}
       </div>
       <div className="space-y-0.5 border-t border-line px-3 py-3">
         <NavLink to={`${base}/suscripcion`} className={linkCls}><CreditCard className="size-[18px]" />Suscripción</NavLink>

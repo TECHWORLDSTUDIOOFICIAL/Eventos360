@@ -4,7 +4,7 @@ import { KeyRound, Lock, Search, Unlock, Users } from "lucide-react";
 import { supabase, callFunction } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { unwrap } from "@/lib/queries";
-import { formatDate } from "@/lib/format";
+import { formatDate, plural } from "@/lib/format";
 import type { PlatformRole } from "@/lib/types";
 import { Alert, Badge, Button, Card, Dialog, EmptyState, Input, PageHeader, Spinner } from "@/components/ui";
 
@@ -67,7 +67,7 @@ export default function AdminUsers() {
                     {u.is_disabled && <Badge tone="danger">Bloqueado</Badge>}
                     {u.must_change_password && <Badge tone="warn">Contraseña temporal</Badge>}
                   </div>
-                  <div className="text-xs text-muted">{u.phone ?? "Sin teléfono"} · {u.workspaces} espacio(s) · Alta {formatDate(u.created_at)}</div>
+                  <div className="text-xs text-muted">{u.phone ?? "Sin teléfono"} · {plural(u.workspaces, "espacio", "espacios")} · Alta {formatDate(u.created_at)}</div>
                 </div>
                 {u.id !== profile?.id && (
                   <div className="flex gap-2">

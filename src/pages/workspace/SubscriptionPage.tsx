@@ -6,6 +6,7 @@ import { formatAccessCode } from "@/lib/accounts";
 import { formatDate, formatMoney } from "@/lib/format";
 import { MODALITIES, STATUS_LABEL, STATUS_TONE } from "@/lib/modalities";
 import { unwrap, useFeatures, usePlatformSettings, useWorkspaceEntitlements, whatsappLink } from "@/lib/queries";
+import { featureReady } from "@/lib/modules";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { Alert, Badge, Button, Card, CardHeader, Field, Input, PageHeader, Spinner } from "@/components/ui";
 
@@ -78,7 +79,7 @@ export default function SubscriptionPage() {
             <h3 className="mb-3 text-sm font-semibold">Incluye</h3>
             {!features || !ent ? <Spinner /> : (
               <ul className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
-                {features.filter((f) => entMap.get(f.key)?.is_enabled || f.value_type === "boolean").map((f) => {
+                {features.filter((f) => featureReady(f.key, ws.kind) && (entMap.get(f.key)?.is_enabled || f.value_type === "boolean")).map((f) => {
                   const e = entMap.get(f.key);
                   const on = !!e?.is_enabled;
                   return (

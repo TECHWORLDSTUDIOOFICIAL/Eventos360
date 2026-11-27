@@ -5,8 +5,8 @@ import { callFunction } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { formatAccessCode, normalizeUsername, passwordError, usernameError } from "@/lib/accounts";
 import { MODALITIES } from "@/lib/modalities";
-import { SPECIALTY_ICONS } from "@/lib/modules";
-import { usePlatformSettings, whatsappLink } from "@/lib/queries";
+import { SPECIALTY_ICONS, isModuleReady } from "@/lib/modules";
+import { usePlatformSettings, useSpecialtyModules, whatsappLink } from "@/lib/queries";
 import type { Specialty, WorkspaceKind } from "@/lib/types";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Alert, Badge, Button, Field, Input, cx } from "@/components/ui";
@@ -23,6 +23,7 @@ interface CheckResult {
 }
 
 export default function Register() {
+  const { data: specMods } = useSpecialtyModules();
   const navigate = useNavigate();
   const { signIn } = useAuth();
   const { data: settings } = usePlatformSettings();
@@ -144,13 +145,19 @@ export default function Register() {
   }
 
   const modality = kind ? MODALITIES[kind] : null;
+  // Cuántas herramientas de cada especialidad ya funcionan (para no prometer lo que aún no existe).
+  const readiness = (key: string) => {
+    const mods = (specMods ?? []).filter((m) => m.specialty_key === key);
+    return { ready: mods.filter((m) => isModuleReady(m.module_key, "business")).length, total: mods.length };
+  };
   return (
     <AuthLayout
       title={isAdmin ? "Cuenta de administrador" : "Completa tu registro"}
       subtitle={
         isAdmin ? "Este código crea una cuenta con acceso al panel de administración de Eventos360." : (
           <span className="flex flex-wrap items-center gap-2">
-            Código válido para <Badge tone="info">{modality?.product}</Badge> · {info?.plan_name} · {info?.duration_days} días
+            Tu código es para <Badge tone="info">{modality?.product}</Badge>
+            <span className="w-full text-sm">Plan {info?.plan_name} · {info?.duration_days} días</span>
           </span>
         )
       }
@@ -190,11 +197,19 @@ export default function Register() {
                     <span className="min-w-0">
                       <span className="block text-sm font-semibold">{s.name}{idx === 0 && <span className="ml-1.5 text-xs font-medium text-business">· Principal</span>}</span>
                       <span className="block text-xs text-muted">{s.description}</span>
+                      {(() => {
+                        const r = readiness(s.key);
+                        if (!r.total) return null;
+                        return r.ready === r.total
+                          ? <span className="mt-1 inline-block rounded-full bg-ok-soft px-2 py-0.5 text-[11px] font-semibold text-ok">Lista para usar</span>
+                          : <span className="mt-1 inline-block rounded-full bg-warn-soft px-2 py-0.5 text-[11px] font-semibold text-warn">{r.ready} de {r.total} herramientas listas</span>;
+                      })()}
                     </span>
                   </button>
                 );
               })}
             </div>
+            <p className="mt-2 text-xs text-muted">Todas ya incluyen clientes, cotizaciones, contratos y finanzas. Las herramientas que aún no están listas se activan solas en tu cuenta, sin costo adicional.</p>
             {touched && errors.specs && <p className="mt-1.5 text-xs text-danger">{errors.specs}</p>}
           </div>
         )}

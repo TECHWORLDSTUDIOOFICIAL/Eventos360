@@ -78,3 +78,11 @@ export function whatsappLink(settings: Record<string, unknown> | undefined, text
   if (!raw) return null;
   return `https://wa.me/${raw}?text=${encodeURIComponent(text)}`;
 }
+
+/** Herramientas de cada especialidad Business (para indicar cuáles ya están listas). */
+export const useSpecialtyModules = () =>
+  useQuery({
+    queryKey: ["specialty-modules"],
+    staleTime: 3_600_000,
+    queryFn: async () => unwrap<{ specialty_key: string; module_key: string }[]>(await supabase.from("specialty_modules").select("specialty_key, module_key")),
+  });

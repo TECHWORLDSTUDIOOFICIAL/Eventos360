@@ -7,6 +7,7 @@ import { formatMoney } from "@/lib/format";
 import { MODALITIES } from "@/lib/modalities";
 import type { Plan, WorkspaceKind } from "@/lib/types";
 import { Alert, Badge, Button, Card, CardHeader, Dialog, Field, Input, PageHeader, Select, Spinner, Textarea } from "@/components/ui";
+import { featureReady } from "@/lib/modules";
 
 export default function AdminPlans() {
   const qc = useQueryClient();
@@ -42,7 +43,7 @@ export default function AdminPlans() {
                         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
                           {pe.map((e) => {
                             const f = features?.find((x) => x.key === e.feature_key);
-                            return <span key={e.feature_key}>{f?.name}{f?.value_type === "limit" ? `: ${e.limit_value ?? "∞"}` : ""}</span>;
+                            return <span key={e.feature_key} className={featureReady(e.feature_key) ? "" : "text-faint"}>{f?.name}{f?.value_type === "limit" ? `: ${e.limit_value ?? "∞"}` : ""}{featureReady(e.feature_key) ? "" : " (próximamente)"}</span>;
                           })}
                         </div>
                       </div>
@@ -141,7 +142,7 @@ function PlanDialog({ plan, onClose, onSaved }: { plan: Plan | null; onClose: ()
               return (
                 <li key={x.key} className="flex items-center gap-3 px-5 py-2.5">
                   <input type="checkbox" checked={v.on} onChange={(e) => setEnt((s) => ({ ...s, [x.key]: { ...v, on: e.target.checked } }))} className="size-4 accent-ink" aria-label={x.name} />
-                  <span className="flex-1 text-sm">{x.name}</span>
+                  <span className="flex-1 text-sm">{x.name}{!featureReady(x.key) && <span className="ml-2 text-xs text-faint">Próximamente: aún no se muestra a los clientes</span>}</span>
                   {x.value_type === "limit" && (
                     <Input type="number" min={0} value={v.limit} disabled={!v.on} placeholder="∞" className="h-9 w-28"
                       onChange={(e) => setEnt((s) => ({ ...s, [x.key]: { ...v, limit: e.target.value } }))} aria-label={`Límite de ${x.name}`} />

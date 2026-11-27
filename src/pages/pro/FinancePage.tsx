@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { unwrap } from "@/lib/queries";
 import { useEvents } from "@/lib/events";
 import { PAYMENT_KIND, docNumber, useCustomers, usePayments, useQuotes, type Payment } from "@/lib/pro";
+import { useRentals } from "@/lib/rental";
 import { formatDate, formatMoney } from "@/lib/format";
 import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
@@ -21,6 +22,7 @@ export default function FinancePage() {
   const { data: quotes } = useQuotes(ws.id);
   const { data: events } = useEvents(ws.id);
   const { data: customers } = useCustomers(ws.id);
+  const { data: rentalRows } = useRentals(ws.id, { statuses: ["reserved", "out", "returned"] });
   const expenses = useQuery({
     queryKey: ["ws-expenses", ws.id],
     queryFn: async () => unwrap<ExpenseLite[]>(await supabase.from("event_expenses").select("event_id, planned_amount, agreed_amount, paid_amount").eq("workspace_id", ws.id)),
@@ -32,11 +34,18 @@ export default function FinancePage() {
   const cust = (id: string | null) => customers?.find((c) => c.id === id)?.name ?? "";
   const evName = (id: string | null) => events?.find((e) => e.id === id)?.name ?? "";
 
-  // Por evento: contratado (cotizaciones aceptadas), cobrado, costos y ganancia. Solo en la moneda elegida.
+  // Lo contratado = cotizaciones aceptadas + reservaciones de alquiler (con sus cargos por daños).
+  // Una cotización convertida en reservación se cuenta una sola vez (por la reservación).
+  const rentedQuotes = new Set((rentalRows ?? []).map((r) => r.quote_id).filter(Boolean));
+  const deals = useMemo(() => [
+    ...(quotes ?? []).filter((q) => q.status === "accepted" && !rentedQuotes.has(q.id)).map((q) => ({ event_id: q.event_id, currency_code: q.currency_code, amount: Number(q.total), retained: 0 })),
+    ...(rentalRows ?? []).map((r) => ({ event_id: r.event_id, currency_code: r.currency_code, amount: Number(r.total) + Number(r.damage_total), retained: Number(r.deposit_retained) })),
+  ], [quotes, rentalRows]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Por evento: contratado, cobrado, costos y ganancia. Solo en la moneda elegida.
   const byEvent = useMemo(() => {
     const rows = (events ?? []).map((e) => {
-      const acc = (quotes ?? []).filter((q) => q.event_id === e.id && q.status === "accepted" && q.currency_code === currency);
-      const contracted = acc.reduce((s, q) => s + Number(q.total), 0);
+      const contracted = deals.filter((x) => x.event_id === e.id && x.currency_code === currency).reduce((s, x) => s + x.amount, 0);
       const received = (payments ?? []).filter((p) => p.event_id === e.id && p.currency_code === currency).reduce((s, p) => s + Number(p.amount), 0);
       const ex = e.currency_code === currency ? (expenses.data ?? []).filter((x) => x.event_id === e.id) : [];
       const costs = ex.reduce((s, x) => s + Number(x.agreed_amount ?? x.planned_amount), 0);
@@ -44,11 +53,18 @@ export default function FinancePage() {
       return { e, contracted, received, costs, paidOut, profit: contracted - costs };
     }).filter((r) => r.contracted || r.received || r.costs);
     return rows.sort((a, b) => (b.e.starts_at ?? "").localeCompare(a.e.starts_at ?? ""));
-  }, [events, quotes, payments, expenses.data, currency]);
+  }, [events, deals, payments, expenses.data, currency]);
 
-  const totals = byEvent.reduce((t, r) => ({ contracted: t.contracted + r.contracted, received: t.received + r.received, costs: t.costs + r.costs, paidOut: t.paidOut + r.paidOut }),
-    { contracted: 0, received: 0, costs: 0, paidOut: 0 });
-  const receivable = Math.max(0, totals.contracted - totals.received);
+  // Totales de todo el negocio (incluye ventas sin evento asociado).
+  const inCur = deals.filter((x) => x.currency_code === currency);
+  const totals = {
+    contracted: inCur.reduce((s, x) => s + x.amount, 0),
+    received: (payments ?? []).filter((p) => p.currency_code === currency).reduce((s, p) => s + Number(p.amount), 0),
+    costs: byEvent.reduce((s, r) => s + r.costs, 0),
+    paidOut: byEvent.reduce((s, r) => s + r.paidOut, 0),
+  };
+  const retained = inCur.reduce((s, x) => s + x.retained, 0);   // daños cubiertos con el depósito
+  const receivable = Math.max(0, totals.contracted - totals.received - retained);
 
   // Ingresos por mes (últimos 6 meses)
   const months = useMemo(() => {
@@ -79,13 +95,13 @@ export default function FinancePage() {
     <div className="animate-rise">
       <PageHeader title="Finanzas" description="Lo que contrataste, lo que cobraste, lo que gastaste y cuánto ganas por evento."
         actions={<>
-          <Select value={currency} onChange={(e) => setCurrency(e.target.value)} className="h-10 w-auto" aria-label="Moneda"><option>NIO</option><option>USD</option></Select>
+          <Select value={currency} onChange={(e) => setCurrency(e.target.value)} className="h-10 w-auto" aria-label="Moneda"><option value="NIO">Ver en córdobas (C$)</option><option value="USD">Ver en dólares (US$)</option></Select>
           {!readOnly && <Button variant="accent" icon={<Plus className="size-4" />} onClick={() => setEditing("new")}>Registrar pago</Button>}
         </>} />
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
-          { l: "Contratado", v: money(totals.contracted), h: "Cotizaciones aceptadas" },
+          { l: "Contratado", v: money(totals.contracted), h: rentalRows?.length ? "Cotizaciones aceptadas y reservaciones" : "Cotizaciones aceptadas" },
           { l: "Cobrado", v: money(totals.received), h: "Pagos de clientes" },
           { l: "Por cobrar", v: money(receivable), h: "Saldo pendiente de clientes", warn: receivable > 0 },
           { l: "Ganancia estimada", v: money(totals.contracted - totals.costs), h: `Costos ${money(totals.costs)}`, bad: totals.contracted - totals.costs < 0 },
@@ -225,9 +241,9 @@ export function PaymentDialog({ payment, defaults, onClose, onSaved }: {
         <Field label="Evento" optional>{(id) => <Select id={id} value={f.event_id} onChange={(e) => set("event_id", e.target.value)}><option value="">Sin evento</option>{(events ?? []).filter((e) => e.customer_id === f.customer_id).map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</Select>}</Field>
         <Field label="Cotización" optional>{(id) => <Select id={id} value={f.quote_id} onChange={(e) => set("quote_id", e.target.value)}><option value="">Ninguna</option>{(quotes ?? []).filter((q) => q.customer_id === f.customer_id).map((q) => <option key={q.id} value={q.id}>{docNumber("COT", q.number)} · {q.title}</option>)}</Select>}</Field>
         <Field label="Tipo">{(id) => <Select id={id} value={f.kind} onChange={(e) => set("kind", e.target.value)}>{Object.entries(PAYMENT_KIND).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>}</Field>
-        <div className="grid grid-cols-[1fr_100px] gap-2">
+        <div className="grid grid-cols-[1fr_150px] gap-2">
           <Field label="Monto">{(id) => <Input id={id} type="number" min="0.01" step="0.01" inputMode="decimal" value={f.amount} onChange={(e) => set("amount", e.target.value)} />}</Field>
-          <Field label="Moneda">{(id) => <Select id={id} value={f.currency_code} onChange={(e) => set("currency_code", e.target.value)}><option>NIO</option><option>USD</option></Select>}</Field>
+          <Field label="Moneda">{(id) => <Select id={id} value={f.currency_code} onChange={(e) => set("currency_code", e.target.value)}><option value="NIO">Córdobas (C$)</option><option value="USD">Dólares (US$)</option></Select>}</Field>
         </div>
         <Field label="Fecha">{(id) => <Input id={id} type="date" value={f.paid_at} onChange={(e) => set("paid_at", e.target.value)} />}</Field>
         <Field label="Método">{(id) => <Select id={id} value={f.method} onChange={(e) => set("method", e.target.value)}>{Object.entries(METHODS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>}</Field>
