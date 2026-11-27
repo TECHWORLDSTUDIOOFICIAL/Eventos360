@@ -7,6 +7,7 @@ import { unwrap } from "@/lib/queries";
 import { useEvents } from "@/lib/events";
 import { CONTRACT_STATUS, CONTRACT_STYLES, CONTRACT_TEMPLATES, DEFAULT_CONTRACT, TEMPLATE_VARS, contractUrl, docNumber, fillTemplate, useContracts, useCustomers, useQuotes, waNumber, type Contract, type ContractStyle } from "@/lib/pro";
 import { useRentals, type RentalItem } from "@/lib/rental";
+import { SETUPS, docBooking, scheduleText, useBookings, useVenues } from "@/lib/venues";
 import { formatDate, formatMoney } from "@/lib/format";
 import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
@@ -143,10 +144,14 @@ function NewContract() {
   const biz = useQuery({ queryKey: ["ws-biz", ws.id], queryFn: async () => unwrap<{ name: string; legal_name: string | null; tax_id: string | null }>(await supabase.from("workspaces").select("name, legal_name, tax_id").eq("id", ws.id).single()) });
   const { modules } = useWorkspace();
   const hasRentals = modules.some((m) => m.module_key === "reservations");
+  const hasBookings = modules.some((m) => m.module_key === "bookings");
   const { data: rentals } = useRentals(ws.id);
+  const { data: bookings } = useBookings(ws.id);
+  const { data: venues } = useVenues(ws.id, { includeInactive: true });
+  const fromBooking = bookings?.find((b) => b.id === params.get("reserva_local"));
   const fromQuote = quotes?.find((q) => q.id === params.get("cotizacion"));
   const fromRental = rentals?.find((r) => r.id === params.get("reserva"));
-  const [f, setF] = useState({ customer_id: params.get("cliente") ?? "", event_id: params.get("evento") ?? "", quote_id: params.get("cotizacion") ?? "", rental_id: params.get("reserva") ?? "", template: CONTRACT_TEMPLATES[0]!.key, style: "clasica" as ContractStyle, title: "Contrato de prestación de servicios" });
+  const [f, setF] = useState({ customer_id: params.get("cliente") ?? "", event_id: params.get("evento") ?? "", quote_id: params.get("cotizacion") ?? "", rental_id: params.get("reserva") ?? "", booking_id: params.get("reserva_local") ?? "", template: CONTRACT_TEMPLATES[0]!.key, style: "clasica" as ContractStyle, title: "Contrato de prestación de servicios" });
   // Líneas de la reservación o de la cotización (para listar los artículos en el contrato).
   const lines = useQuery({
     queryKey: ["contract-lines", f.rental_id, f.quote_id],
@@ -158,6 +163,9 @@ function NewContract() {
   useEffect(() => {
     if (fromRental) setF((s) => ({ ...s, customer_id: fromRental.customer_id, event_id: fromRental.event_id ?? "", quote_id: fromRental.quote_id ?? "", rental_id: fromRental.id, template: "alquiler", title: CONTRACT_TEMPLATES.find((t) => t.key === "alquiler")!.name }));
   }, [fromRental]);
+  useEffect(() => {
+    if (fromBooking) setF((s) => ({ ...s, customer_id: fromBooking.customer_id ?? "", event_id: fromBooking.event_id ?? "", booking_id: fromBooking.id, template: "local", title: "Contrato de alquiler de local" }));
+  }, [fromBooking]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => { if (fromQuote) setF((s) => ({ ...s, customer_id: fromQuote.customer_id, event_id: fromQuote.event_id ?? "", quote_id: fromQuote.id })); }, [fromQuote]);
@@ -169,29 +177,36 @@ function NewContract() {
     const ev = events?.find((x) => x.id === f.event_id);
     const q = quotes?.find((x) => x.id === f.quote_id);
     const rt = rentals?.find((x) => x.id === f.rental_id);
+    const bk = bookings?.find((x) => x.id === f.booking_id);
+    const bv = venues?.find((x) => x.id === bk?.venue_id);
     const tpl = CONTRACT_TEMPLATES.find((t) => t.key === f.template)?.body ?? templates?.find((t) => t.id === f.template)?.body ?? DEFAULT_CONTRACT;
-    const cur = rt?.currency_code ?? q?.currency_code ?? ev?.currency_code ?? region.currency_code;
+    const cur = bk?.currency_code ?? rt?.currency_code ?? q?.currency_code ?? ev?.currency_code ?? region.currency_code;
     const m = (n: number) => formatMoney(n, cur, region.locale);
     const dt = (iso: string) => formatDate(iso, { timeZone: region.timezone, locale: region.locale, withTime: true });
     const goods = (lines.data ?? []).filter((l) => !rt || l.resource_id);
     const articulos = goods.length ? goods.map((l) => `${Number(l.quantity)} ${l.description}`).join("; ") : "__________";
-    const total = rt ? Number(rt.total) : q ? Number(q.total) : null;
-    const advance = rt ? Math.round(Number(rt.total) * Number(rt.advance_pct)) / 100 : q ? Math.round(Number(q.total) * Number(q.deposit_pct)) / 100 : null;
+    const total = bk ? Number(bk.total) : rt ? Number(rt.total) : q ? Number(q.total) : null;
+    const tm = (ms: number) => new Intl.DateTimeFormat(region.locale, { timeZone: region.timezone, hour: "numeric", minute: "2-digit" }).format(new Date(ms));
+    const advance = bk ? Math.round(Number(bk.total) * Number(bk.advance_pct)) / 100 : rt ? Math.round(Number(rt.total) * Number(rt.advance_pct)) / 100 : q ? Math.round(Number(q.total) * Number(q.deposit_pct)) / 100 : null;
     const body = fillTemplate(tpl, {
       cliente: c.name, cliente_identificacion: c.tax_id ?? "__________", cliente_direccion: c.address ?? "__________",
       // Sin evento, una reservación aporta su título, su fecha de entrega y su dirección.
-      evento: ev?.name ?? rt?.title ?? "__________",
+      evento: ev?.name ?? bk?.title ?? rt?.title ?? "__________",
+      espacio: bv ? `"${bv.name}"` : "__________",
+      horario: bk ? scheduleText(bk.starts_at, bk.ends_at, region.timezone, region.locale) : "__________",
+      montaje: bk ? `Montaje: ${SETUPS[bk.setup].label.toLowerCase()}. El montaje podrá iniciar a las ${tm(new Date(bk.starts_at).getTime() - bk.setup_minutes * 60_000)} y el desmontaje deberá concluir a las ${tm(new Date(bk.ends_at).getTime() + bk.teardown_minutes * 60_000)}.` : "",
+      reglas: bv?.rules ? bv.rules.replace(/\s*\n+\s*/g, "; ").replace(/[.;]\s*$/, "") : "las indicadas por EL ARRENDADOR",
       fecha_evento: ev?.starts_at ? formatDate(ev.starts_at, { timeZone: region.timezone, locale: region.locale, withTime: true }) : rt ? dt(rt.starts_at) : "__________",
-      lugar: [ev?.venue_name, ev?.venue_address].filter(Boolean).join(", ") || rt?.delivery_address || "__________", invitados: ev?.guests_estimate ? String(ev.guests_estimate) : "__________",
+      lugar: [ev?.venue_name, ev?.venue_address].filter(Boolean).join(", ") || bv?.name || rt?.delivery_address || "__________", invitados: bk?.guests ? String(bk.guests) : ev?.guests_estimate ? String(ev.guests_estimate) : "__________",
       monto: total != null ? m(total) : "__________", anticipo: advance != null ? m(advance) : "__________", articulos,
       fecha_entrega: rt ? dt(rt.starts_at) : "__________", fecha_devolucion: rt ? dt(rt.ends_at) : "__________",
-      deposito: rt && Number(rt.deposit_amount) > 0 ? m(Number(rt.deposit_amount)) : "__________",
+      deposito: bk && Number(bk.deposit_amount) > 0 ? m(Number(bk.deposit_amount)) : rt && Number(rt.deposit_amount) > 0 ? m(Number(rt.deposit_amount)) : "__________",
       organizador: biz.data?.legal_name || biz.data?.name || ws.name, organizador_identificacion: biz.data?.tax_id ?? "__________",
       fecha_hoy: formatDate(new Date(), { timeZone: region.timezone, locale: region.locale }),
     });
     setBusy(true);
     const { data, error: err } = await supabase.from("contracts").insert({
-      workspace_id: ws.id, customer_id: c.id, event_id: f.event_id || null, quote_id: f.quote_id || null, rental_id: f.rental_id || null, title: f.title.trim() || "Contrato",
+      workspace_id: ws.id, customer_id: c.id, event_id: f.event_id || null, quote_id: f.quote_id || null, rental_id: f.rental_id || null, booking_id: f.booking_id || null, title: f.title.trim() || "Contrato",
       body, amount: total, currency_code: cur, template: f.style,
     }).select("id").single();
     setBusy(false);
@@ -205,7 +220,8 @@ function NewContract() {
       <PageHeader title="Nuevo contrato" description="Se llena automáticamente con los datos del cliente, el evento y la cotización. Luego puedes editar el texto." />
       <Card className="p-5">
         <form onSubmit={submit} className="space-y-4">
-          <Field label="Cliente">{(id) => <Select id={id} value={f.customer_id} onChange={(e) => setF((s) => ({ ...s, customer_id: e.target.value, event_id: "", quote_id: "", rental_id: "" }))}><option value="">Elegir…</option>{(customers ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>}</Field>
+          <Field label="Cliente">{(id) => <Select id={id} value={f.customer_id} onChange={(e) => setF((s) => ({ ...s, customer_id: e.target.value, event_id: "", quote_id: "", rental_id: "", booking_id: "" }))}><option value="">Elegir…</option>{(customers ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>}</Field>
+          {hasBookings && <Field label="Reserva de espacio" optional hint="Toma espacio, horario, montaje, monto, garantía y reglas.">{(id, d) => <Select id={id} aria-describedby={d} value={f.booking_id} onChange={(e) => setF((s) => ({ ...s, booking_id: e.target.value }))}><option value="">Ninguna</option>{(bookings ?? []).filter((b) => b.customer_id === f.customer_id && b.status !== "canceled").map((b) => <option key={b.id} value={b.id}>{docBooking(b.number)} · {b.title}</option>)}</Select>}</Field>}
           {hasRentals && <Field label="Reservación" optional hint="Toma artículos, fechas, monto y depósito de aquí.">{(id, d) => <Select id={id} aria-describedby={d} value={f.rental_id} onChange={(e) => setF((s) => ({ ...s, rental_id: e.target.value }))}><option value="">Ninguna</option>{(rentals ?? []).filter((r) => r.customer_id === f.customer_id && r.status !== "canceled").map((r) => <option key={r.id} value={r.id}>{docNumber("RES", r.number)} · {r.title}</option>)}</Select>}</Field>}
           <Field label="Evento" optional>{(id) => <Select id={id} value={f.event_id} onChange={(e) => setF((s) => ({ ...s, event_id: e.target.value }))}><option value="">Sin evento</option>{(events ?? []).filter((e) => e.customer_id === f.customer_id).map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</Select>}</Field>
           <Field label="Cotización" optional hint="Toma el monto y el anticipo de aquí.">{(id, d) => <Select id={id} aria-describedby={d} value={f.quote_id} onChange={(e) => setF((s) => ({ ...s, quote_id: e.target.value }))}><option value="">Ninguna</option>{(quotes ?? []).filter((q) => q.customer_id === f.customer_id).map((q) => <option key={q.id} value={q.id}>{docNumber("COT", q.number)} · {q.title}</option>)}</Select>}</Field>

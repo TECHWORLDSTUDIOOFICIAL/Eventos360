@@ -9,6 +9,7 @@ import { Alert, Badge, Card, CardHeader, PageHeader, Stat } from "@/components/u
 import PersonalHome from "@/pages/personal/PersonalHome";
 import ProHome from "@/pages/pro/ProHome";
 import BusinessHome from "@/pages/business/BusinessHome";
+import VenueHome from "@/pages/venues/VenueHome";
 import { EVENT_SCOPED } from "./moduleRegistry";
 
 const INTRO = {
@@ -29,7 +30,10 @@ export default function WorkspaceHome() {
 }
 
 function BusinessOrGeneric() {
-  const { modules } = useWorkspace();
+  const { modules, ws } = useWorkspace();
+  const has = (k: string) => modules.some((m) => m.module_key === k);
+  // Salones y locales (si es su especialidad principal, o si no alquila inventario).
+  if (has("bookings") && (!has("reservations") || /local|espacio/i.test(ws.primary_specialty ?? ""))) return <VenueHome />;
   // Negocios con inventario (alquiler, decoración, sonido, vestidos…) tienen su panel operativo.
   if (modules.some((m) => m.module_key === "reservations" || m.module_key === "inventory")) return <BusinessHome />;
   return <GenericHome />;

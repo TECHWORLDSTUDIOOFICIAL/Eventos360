@@ -44,6 +44,11 @@ export const MODULE_PAGES: Partial<Record<WorkspaceKind, Record<string, Page>>> 
     returns: lazy(() => import("@/pages/business/ReturnsPage")),
     maintenance: lazy(() => import("@/pages/business/MaintenancePage")),
     team: lazy(() => import("@/pages/business/TeamPage")),
+    // Salones y locales
+    venues: lazy(() => import("@/pages/venues/VenuesPage")),
+    venue_rates: lazy(() => import("@/pages/venues/RatesPage")),
+    bookings: lazy(() => import("@/pages/venues/BookingsPage")),
+    venue_calendar: lazy(() => import("@/pages/venues/OccupancyPage")),
   },
 };
 

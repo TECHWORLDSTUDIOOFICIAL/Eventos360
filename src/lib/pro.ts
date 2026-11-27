@@ -28,7 +28,7 @@ export interface Contract {
   template: ContractStyle; include_provider_signature: boolean; accepted_signature: string | null;
 }
 export interface Payment {
-  id: string; customer_id: string; event_id: string | null; quote_id: string | null; rental_id?: string | null; kind: "deposit" | "installment" | "final" | "other";
+  id: string; customer_id: string; event_id: string | null; quote_id: string | null; rental_id?: string | null; booking_id?: string | null; kind: "deposit" | "installment" | "final" | "other";
   amount: number; currency_code: string; method: string; reference: string | null; paid_at: string; notes: string | null;
 }
 export interface CalendarItem {
@@ -114,7 +114,8 @@ export const TEMPLATE_VARS: [string, string][] = [
   ["cliente", "Nombre del cliente"], ["cliente_identificacion", "Cédula / RUC del cliente"], ["cliente_direccion", "Dirección del cliente"],
   ["evento", "Nombre del evento"], ["fecha_evento", "Fecha del evento"], ["lugar", "Lugar del evento"], ["invitados", "Invitados estimados"],
   ["monto", "Monto total"], ["anticipo", "Anticipo"], ["articulos", "Artículos y cantidades"], ["fecha_entrega", "Fecha de entrega"],
-  ["fecha_devolucion", "Fecha de devolución"], ["deposito", "Depósito de garantía"], ["organizador", "Tu nombre comercial"], ["organizador_identificacion", "Tu RUC / cédula"], ["fecha_hoy", "Fecha de hoy"],
+  ["fecha_devolucion", "Fecha de devolución"], ["deposito", "Depósito de garantía"],
+  ["espacio", "Espacio reservado"], ["horario", "Fecha y horario del evento"], ["montaje", "Horario de montaje y desmontaje"], ["reglas", "Reglas del espacio"], ["organizador", "Tu nombre comercial"], ["organizador_identificacion", "Tu RUC / cédula"], ["fecha_hoy", "Fecha de hoy"],
 ];
 
 export const QUOTE_TEMPLATES: Record<QuoteTemplate, { name: string; description: string }> = {
@@ -219,6 +220,34 @@ SEXTA. DAÑOS Y FALTANTES. Los artículos dañados, perdidos o no devueltos se c
 SÉPTIMA. RETRASOS. Si los artículos no están disponibles para la recolección en el horario acordado, EL ARRENDADOR podrá cobrar un día adicional de alquiler por cada día de retraso.
 
 OCTAVA. CANCELACIÓN. El anticipo no es reembolsable si la cancelación ocurre con menos de siete (7) días de anticipación a la fecha del evento.
+
+${BASE_CLOSING}`,
+  },
+  {
+    key: "local",
+    name: "Alquiler de local o salón",
+    description: "Para salones, jardines, fincas y espacios: fecha, horario, montaje, garantía y reglas de uso.",
+    body: `CONTRATO DE ALQUILER DE LOCAL PARA EVENTOS
+
+Entre {{organizador}}, identificado con {{organizador_identificacion}}, en adelante "EL ARRENDADOR", y {{cliente}}, identificado con {{cliente_identificacion}}, con domicilio en {{cliente_direccion}}, en adelante "EL ARRENDATARIO", se acuerda el siguiente contrato:
+
+PRIMERA. OBJETO. EL ARRENDADOR concede a EL ARRENDATARIO el uso del espacio {{espacio}} para realizar el evento "{{evento}}", para aproximadamente {{invitados}} invitados.
+
+SEGUNDA. FECHA Y HORARIO. El evento se realizará el {{horario}}. {{montaje}} El uso del espacio fuera de este horario se cobrará como hora adicional según la tarifa vigente.
+
+TERCERA. PRECIO Y PAGO. El valor total es de {{monto}}. Para reservar la fecha, EL ARRENDATARIO pagará un anticipo de {{anticipo}}. El saldo deberá cancelarse antes del inicio del montaje. Sin el pago total, EL ARRENDADOR no estará obligado a entregar el espacio.
+
+CUARTA. GARANTÍA. EL ARRENDATARIO entregará una garantía de {{deposito}}, que le será devuelta después del evento, descontando, si los hubiera, los daños a las instalaciones, faltantes o cargos por limpieza extraordinaria.
+
+QUINTA. REGLAS DE USO. EL ARRENDATARIO, sus invitados y proveedores respetarán las siguientes reglas del espacio: {{reglas}}.
+
+SEXTA. CAPACIDAD Y SEGURIDAD. EL ARRENDATARIO no excederá la capacidad del espacio y será responsable del comportamiento de sus invitados y proveedores, así como de los daños que causen.
+
+SÉPTIMA. PROVEEDORES. Los proveedores contratados por EL ARRENDATARIO deberán coordinar con EL ARRENDADOR su horario de llegada, montaje y retiro, dentro del horario acordado.
+
+OCTAVA. CANCELACIÓN. Si EL ARRENDATARIO cancela con menos de treinta (30) días de anticipación, el anticipo no será reembolsable. EL ARRENDADOR podrá ofrecer un cambio de fecha sujeto a disponibilidad.
+
+NOVENA. FUERZA MAYOR. Ninguna de las partes será responsable por incumplimientos causados por fuerza mayor o caso fortuito. En ese caso, se acordará una nueva fecha o la devolución de lo pagado, descontando gastos comprobables.
 
 ${BASE_CLOSING}`,
   },

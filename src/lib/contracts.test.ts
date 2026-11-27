@@ -3,8 +3,8 @@ import { CONTRACT_TEMPLATES, TEMPLATE_VARS, fillTemplate } from "./pro";
 import { CLAUSE_RE } from "@/pages/pro/print/documents";
 
 describe("plantillas de contrato", () => {
-  it("hay 3 plantillas y todas sus variables son conocidas", () => {
-    expect(CONTRACT_TEMPLATES).toHaveLength(3);
+  it("hay 4 plantillas y todas sus variables son conocidas", () => {
+    expect(CONTRACT_TEMPLATES).toHaveLength(4);
     const known = new Set(TEMPLATE_VARS.map(([k]) => k));
     for (const t of CONTRACT_TEMPLATES) {
       const used = [...t.body.matchAll(/\{\{\s*([a-z_]+)\s*\}\}/g)].map((m) => m[1]!);
@@ -16,7 +16,7 @@ describe("plantillas de contrato", () => {
     const vars = Object.fromEntries(TEMPLATE_VARS.map(([k]) => [k, "X"]));
     for (const t of CONTRACT_TEMPLATES) expect(fillTemplate(t.body, vars)).not.toMatch(/\{\{/);
   });
-  it("detecta los encabezados de cláusula en las 3 plantillas", () => {
+  it("detecta los encabezados de cláusula en las 4 plantillas", () => {
     for (const t of CONTRACT_TEMPLATES) {
       const paras = t.body.split(/\n\s*\n/).map((p) => p.trim());
       const clauses = paras.filter((p) => /^(PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|OCTAVA|NOVENA|DÉCIMA)\./.test(p));

@@ -51,8 +51,10 @@ export const MODULES: Record<string, ModuleMeta> = {
   returns: m(RotateCcw, "Devoluciones, revisión y depósitos de garantía.", null),
   maintenance: m(Wrench, "Daños, limpieza y mantenimiento.", null),
   installations: m(Hammer, "Montajes, instalación y desmontaje.", 7),
-  venues: m(Building2, "Espacios: capacidad, características, fotos y reglas de uso.", 7),
-  venue_rates: m(Receipt, "Tarifas por día, temporada, horario, duración y tipo de evento.", 7),
+  venues: m(Building2, "Espacios: capacidad por montaje, comodidades, fotos y reglas de uso.", null),
+  venue_rates: m(Receipt, "Tarifas por día y temporada, hora extra y garantía.", null),
+  bookings: m(CalendarCheck, "Consultas, apartados y reservas de tus espacios, sin dobles reservas.", null),
+  venue_calendar: m(CalendarDays, "Ocupación de cada espacio día por día.", null),
   menus: m(UtensilsCrossed, "Menús y precios por persona.", 8),
   orders: m(ClipboardList, "Pedidos y producción.", 8),
   ingredients: m(Carrot, "Ingredientes, recetas y costo de preparación.", 8),
@@ -73,7 +75,7 @@ const IMPLEMENTED: Record<string, string[]> = {
   personal: ["home", "my_event", "guests", "invitations", "budget", "suppliers", "seating", "schedule", "tasks", "inspiration"],
   professional: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget"],
   business: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget",
-    "inventory", "reservations", "availability", "deliveries", "returns", "maintenance", "team"],
+    "inventory", "reservations", "availability", "deliveries", "returns", "maintenance", "team", "venues", "venue_rates", "bookings", "venue_calendar"],
 };
 
 export function moduleMeta(key: string, kind?: string): ModuleMeta {
@@ -96,8 +98,9 @@ export const featureReady = (key: string, kind?: string) => !!FEATURE_AVAILABLE[
 
 /** Secciones del menú (Profesional y Business) para que sea fácil encontrar cada herramienta. */
 export const NAV_GROUPS: { title: string; keys: string[] }[] = [
-  { title: "Operación", keys: ["reservations", "deliveries", "returns", "availability", "events", "calendar", "tasks", "schedule", "guests", "seating", "invitations", "installations", "orders", "sessions", "shifts", "venues", "menus"] },
-  { title: "Ventas", keys: ["customers", "quotes", "contracts", "packages", "catalog", "venue_rates"] },
+  { title: "Operación", keys: ["bookings", "venue_calendar", "reservations", "deliveries", "returns", "availability", "events", "calendar", "tasks", "schedule", "guests", "seating", "invitations", "installations", "orders", "sessions", "shifts", "menus"] },
+  { title: "Espacios", keys: ["venues", "venue_rates"] },
+  { title: "Ventas", keys: ["customers", "quotes", "contracts", "packages", "catalog"] },
   { title: "Inventario", keys: ["inventory", "maintenance", "ingredients", "deliverables", "portfolio"] },
   { title: "Administración", keys: ["finance", "suppliers", "workforce", "reports", "team", "budget"] },
 ];

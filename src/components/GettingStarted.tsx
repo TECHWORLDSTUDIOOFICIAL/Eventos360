@@ -22,12 +22,19 @@ const RENTAL_STEPS: Step[] = [
   { key: "rental", title: "Crea tu primera reservación", text: "Elige fechas y artículos: el sistema aparta las unidades sin sobrevender.", to: "m/reservations/nueva", table: "rentals", module: "reservations" },
 ];
 
+const VENUE_STEPS: Step[] = [
+  { key: "biz", title: "Completa los datos de tu negocio", text: "Logo, teléfono y RUC: aparecen en confirmaciones y contratos.", to: "configuracion" },
+  { key: "venues", title: "Registra tus espacios", text: "Salones, jardines… con su capacidad, fotos y reglas.", to: "m/venues", table: "venues", module: "venues" },
+  { key: "rates", title: "Define tus tarifas", text: "Precio por bloque de horas, hora extra y garantía; por día o temporada.", to: "m/venue_rates", table: "venue_rates", module: "venue_rates" },
+  { key: "booking", title: "Registra tu primera reserva o consulta", text: "El sistema te dice al instante si la fecha está libre.", to: "m/bookings/nueva", table: "bookings", module: "bookings" },
+];
+
 /** Guía de primeros pasos para cuentas nuevas. Se oculta sola al completarse (o si el usuario la cierra). */
-export function GettingStarted({ variant }: { variant: "pro" | "rental" }) {
+export function GettingStarted({ variant }: { variant: "pro" | "rental" | "venue" }) {
   const { ws, modules, readOnly } = useWorkspace();
   const key = `e360-guide-${ws.id}`;
   const [hidden, setHidden] = useState(() => { try { return localStorage.getItem(key) === "1"; } catch { return false; } });
-  const steps = (variant === "pro" ? PRO_STEPS : RENTAL_STEPS).filter((s) => !s.module || modules.some((m) => m.module_key === s.module));
+  const steps = (variant === "pro" ? PRO_STEPS : variant === "venue" ? VENUE_STEPS : RENTAL_STEPS).filter((s) => !s.module || modules.some((m) => m.module_key === s.module));
   const { data: done } = useQuery({
     queryKey: ["getting-started", ws.id, variant],
     enabled: !hidden && !readOnly,
