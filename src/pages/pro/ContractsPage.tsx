@@ -12,6 +12,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { Alert, Badge, Button, Card, CardHeader, Dialog, EmptyState, Field, Input, PageHeader, Select, Spinner, Textarea, cx } from "@/components/ui";
+import { CustomerSelect } from "@/components/QuickCreate";
 
 interface Template { id: string; name: string; body: string }
 
@@ -220,7 +221,7 @@ function NewContract() {
       <PageHeader title="Nuevo contrato" description="Se llena automáticamente con los datos del cliente, el evento y la cotización. Luego puedes editar el texto." />
       <Card className="p-5">
         <form onSubmit={submit} className="space-y-4">
-          <Field label="Cliente">{(id) => <Select id={id} value={f.customer_id} onChange={(e) => setF((s) => ({ ...s, customer_id: e.target.value, event_id: "", quote_id: "", rental_id: "", booking_id: "" }))}><option value="">Elegir…</option>{(customers ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>}</Field>
+          <Field label="Cliente">{(id) => <CustomerSelect id={id} value={f.customer_id} onChange={(v) => setF((s) => ({ ...s, customer_id: v, event_id: "", quote_id: "", rental_id: "", booking_id: "" }))} />}</Field>
           {hasBookings && <Field label="Reserva de espacio" optional hint="Toma espacio, horario, montaje, monto, garantía y reglas.">{(id, d) => <Select id={id} aria-describedby={d} value={f.booking_id} onChange={(e) => setF((s) => ({ ...s, booking_id: e.target.value }))}><option value="">Ninguna</option>{(bookings ?? []).filter((b) => b.customer_id === f.customer_id && b.status !== "canceled").map((b) => <option key={b.id} value={b.id}>{docBooking(b.number)} · {b.title}</option>)}</Select>}</Field>}
           {hasRentals && <Field label="Reservación" optional hint="Toma artículos, fechas, monto y depósito de aquí.">{(id, d) => <Select id={id} aria-describedby={d} value={f.rental_id} onChange={(e) => setF((s) => ({ ...s, rental_id: e.target.value }))}><option value="">Ninguna</option>{(rentals ?? []).filter((r) => r.customer_id === f.customer_id && r.status !== "canceled").map((r) => <option key={r.id} value={r.id}>{docNumber("RES", r.number)} · {r.title}</option>)}</Select>}</Field>}
           <Field label="Evento" optional>{(id) => <Select id={id} value={f.event_id} onChange={(e) => setF((s) => ({ ...s, event_id: e.target.value }))}><option value="">Sin evento</option>{(events ?? []).filter((e) => e.customer_id === f.customer_id).map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</Select>}</Field>

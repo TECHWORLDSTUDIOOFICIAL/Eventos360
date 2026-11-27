@@ -5,10 +5,11 @@ import { AlertTriangle, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-r
 import { supabase } from "@/lib/supabase";
 import { unwrap } from "@/lib/queries";
 import { fromLocalInput, toLocalInput, useEvents } from "@/lib/events";
-import { CALENDAR_KIND, useCustomers, type CalendarItem } from "@/lib/pro";
+import { CALENDAR_KIND, type CalendarItem } from "@/lib/pro";
 import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { Alert, Button, Card, Dialog, Field, Input, PageHeader, Select, Textarea, cx } from "@/components/ui";
+import { CustomerSelect } from "@/components/QuickCreate";
 
 interface Entry { id: string; date: string; time: string; title: string; color: string; href?: string; item?: CalendarItem; conflict?: boolean; kind: string; end?: number; start?: number }
 
@@ -158,7 +159,6 @@ function EntryList({ list, showDate, onEdit }: { list: Entry[]; showDate: boolea
 function ItemDialog({ item, date, onClose }: { item: CalendarItem | null; date?: string; onClose: () => void }) {
   const { ws, region } = useWorkspace();
   const qc = useQueryClient();
-  const { data: customers } = useCustomers(ws.id);
   const { data: events } = useEvents(ws.id);
   const [f, setF] = useState({
     kind: item?.kind ?? "meeting", title: item?.title ?? "", starts_at: item ? toLocalInput(item.starts_at, region.timezone) : `${date}T10:00`,
@@ -198,7 +198,7 @@ function ItemDialog({ item, date, onClose }: { item: CalendarItem | null; date?:
         <Field label="Título">{(id) => <Input id={id} value={f.title} onChange={(e) => set("title", e.target.value)} placeholder="Ej. Degustación del menú" autoFocus />}</Field>
         <Field label="Inicio">{(id) => <Input id={id} type="datetime-local" value={f.starts_at} onChange={(e) => set("starts_at", e.target.value)} />}</Field>
         <Field label="Fin" optional>{(id) => <Input id={id} type="datetime-local" value={f.ends_at} onChange={(e) => set("ends_at", e.target.value)} />}</Field>
-        <Field label="Cliente" optional>{(id) => <Select id={id} value={f.customer_id} onChange={(e) => set("customer_id", e.target.value)}><option value="">—</option>{(customers ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>}</Field>
+        <Field label="Cliente" optional>{(id) => <CustomerSelect id={id} value={f.customer_id} onChange={(v) => set("customer_id", v)} emptyLabel="—" />}</Field>
         <Field label="Evento" optional>{(id) => <Select id={id} value={f.event_id} onChange={(e) => set("event_id", e.target.value)}><option value="">—</option>{(events ?? []).map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}</Select>}</Field>
         <div className="sm:col-span-2"><Field label="Lugar" optional>{(id) => <Input id={id} value={f.location} onChange={(e) => set("location", e.target.value)} />}</Field></div>
         <div className="sm:col-span-2"><Field label="Notas" optional>{(id) => <Textarea id={id} value={f.notes} onChange={(e) => set("notes", e.target.value)} />}</Field></div>

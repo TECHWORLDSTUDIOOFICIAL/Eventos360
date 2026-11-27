@@ -9,6 +9,7 @@ import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { EventGate, EventSwitcher } from "@/components/EventGate";
 import { Alert, Badge, Button, Card, Dialog, EmptyState, Field, Input, PageHeader, Select, Spinner, Textarea, cx } from "@/components/ui";
 import { useSuppliers } from "./SuppliersPage";
+import { SupplierSelect } from "@/components/QuickCreate";
 
 export interface ExpenseRow {
   id: string; event_id: string; supplier_id: string | null; category: string; concept: string;
@@ -129,7 +130,6 @@ export function Budget({ event, events, select }: { event: EventRow; events: Eve
 
 function ExpenseDialog({ event, expense, onClose }: { event: EventRow; expense: ExpenseRow | null; onClose: () => void }) {
   const { ws } = useWorkspace();
-  const { data: suppliers } = useSuppliers();
   const invalidate = useInvalidateEvent();
   const [f, setF] = useState({
     category: expense?.category ?? "lugar", concept: expense?.concept ?? "", supplier_id: expense?.supplier_id ?? "",
@@ -176,10 +176,7 @@ function ExpenseDialog({ event, expense, onClose }: { event: EventRow; expense: 
         <Field label="Concepto">{(id) => <Input id={id} value={f.concept} onChange={(e) => set("concept", e.target.value)} placeholder="Ej. Alquiler del salón" autoFocus />}</Field>
         <Field label="Proveedor" optional>
           {(id) => (
-            <Select id={id} value={f.supplier_id} onChange={(e) => set("supplier_id", e.target.value)}>
-              <option value="">Sin proveedor</option>
-              {(suppliers ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </Select>
+            <SupplierSelect id={id} value={f.supplier_id} onChange={(v) => set("supplier_id", v)} />
           )}
         </Field>
         <Field label="Fecha límite de pago" optional>{(id) => <Input id={id} type="date" value={f.due_date} onChange={(e) => set("due_date", e.target.value)} />}</Field>

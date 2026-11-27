@@ -73,12 +73,14 @@ export function Field({ label, hint, error, children, optional }: FieldProps) {
   );
 }
 
+/** Si el componente recibe su propio ancho (w-auto, w-20…), no se fuerza w-full. */
+const widthOf = (className?: string) => (className && /(^|\s)w-/.test(className) ? "" : "w-full");
 const inputBase =
-  "w-full rounded-xl border border-line-strong bg-card px-3.5 text-[15px] text-ink placeholder:text-faint shadow-[inset_0_1px_0_rgb(0_0_0/0.02)] transition focus:border-[var(--accent)] focus:outline-none focus:ring-4 focus:ring-[var(--accent-soft)] disabled:bg-paper disabled:text-muted";
+  "rounded-xl border border-line-strong bg-card px-3.5 text-[15px] text-ink placeholder:text-faint shadow-[inset_0_1px_0_rgb(0_0_0/0.02)] transition focus:border-[var(--accent)] focus:outline-none focus:ring-4 focus:ring-[var(--accent-soft)] disabled:bg-paper disabled:text-muted";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }>(
   function Input({ className, invalid, ...rest }, ref) {
-    return <input ref={ref} className={cx(inputBase, "h-11", invalid && "border-danger", className)} aria-invalid={invalid || undefined} {...rest} />;
+    return <input ref={ref} className={cx(widthOf(className), inputBase, "h-11", invalid && "border-danger", className)} aria-invalid={invalid || undefined} {...rest} />;
   },
 );
 
@@ -87,7 +89,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
   ref,
 ) {
   return (
-    <select ref={ref} className={cx(inputBase, "h-11 appearance-none bg-[length:16px] bg-[right_0.75rem_center] bg-no-repeat pr-9", className)}
+    <select ref={ref} className={cx(widthOf(className), inputBase, "h-11 appearance-none bg-[length:16px] bg-[right_0.75rem_center] bg-no-repeat pr-9", className)}
       style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236f6680' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")" }}
       {...rest}
     >
@@ -100,7 +102,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   { className, ...rest },
   ref,
 ) {
-  return <textarea ref={ref} className={cx(inputBase, "min-h-20 py-2.5", className)} {...rest} />;
+  return <textarea ref={ref} className={cx("w-full", inputBase, "min-h-20 py-2.5", className)} {...rest} />;
 });
 
 // ------------------------------------------------------------------ Surfaces

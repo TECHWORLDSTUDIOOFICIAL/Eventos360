@@ -15,6 +15,7 @@ import { Schedule } from "@/pages/personal/SchedulePage";
 import { Tasks } from "@/pages/personal/TasksPage";
 import { Budget } from "@/pages/personal/BudgetPage";
 import { Alert, Badge, Button, Card, CardHeader, Dialog, EmptyState, Field, Input, PageHeader, Select, Spinner, Textarea, cx } from "@/components/ui";
+import { CustomerSelect } from "@/components/QuickCreate";
 
 const STATUS: Record<EventRow["status"], { label: string; tone: "info" | "ok" | "neutral" | "danger" }> = {
   planning: { label: "En organización", tone: "info" }, confirmed: { label: "Confirmado", tone: "ok" },
@@ -97,7 +98,6 @@ function EventList() {
 export function ProEventDialog({ event, defaultCustomer, onClose, onSaved }: { event: EventRow | null; defaultCustomer?: string; onClose: () => void; onSaved: (id: string) => void }) {
   const { ws, region } = useWorkspace();
   const qc = useQueryClient();
-  const { data: customers } = useCustomers(ws.id);
   const [f, setF] = useState({
     name: event?.name ?? "", customer_id: event?.customer_id ?? defaultCustomer ?? "", category: event?.category ?? "boda", honorees: event?.honorees ?? "",
     starts_at: toLocalInput(event?.starts_at ?? null, region.timezone), ends_at: toLocalInput(event?.ends_at ?? null, region.timezone),
@@ -147,10 +147,7 @@ export function ProEventDialog({ event, defaultCustomer, onClose, onSaved }: { e
       <form id="pro-event-form" onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
         <Field label="Cliente">
           {(id) => (
-            <Select id={id} value={f.customer_id} onChange={(e) => set("customer_id", e.target.value)}>
-              <option value="">Sin cliente asignado</option>
-              {(customers ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </Select>
+            <CustomerSelect id={id} value={f.customer_id} onChange={(v) => set("customer_id", v)} emptyLabel="Sin cliente asignado" />
           )}
         </Field>
         <Field label="Nombre del evento">{(id) => <Input id={id} value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Ej. Boda Rodríguez – López" />}</Field>

@@ -13,10 +13,10 @@ export interface Quote {
   status: "draft" | "sent" | "accepted" | "rejected" | "expired"; issue_date: string; valid_until: string | null; currency_code: string;
   discount_amount: number; tax_rate: number; deposit_pct: number; subtotal: number; tax_amount: number; total: number;
   terms: string | null; notes: string | null; public_token: string; accepted_at: string | null; accepted_name: string | null; created_at: string;
-  template: QuoteTemplate; intro: string | null;
+  template: QuoteTemplate; intro: string | null; cost_total?: number;
 }
 export interface QuoteItem {
-  id: string; quote_id: string; sort: number; description: string; details: string | null; image_path: string | null; resource_id?: string | null;
+  id: string; quote_id: string; sort: number; description: string; details: string | null; image_path: string | null; resource_id?: string | null; unit_cost?: number; supplier_id?: string | null; catalog_item_id?: string | null; package_id?: string | null;
   quantity: number; unit_price: number; discount_pct: number; line_total: number;
 }
 export type QuoteTemplate = "clasica" | "catalogo" | "elegante";
