@@ -9,6 +9,7 @@ import ChangePassword from "./pages/ChangePassword";
 import Workspaces from "./pages/Workspaces";
 import NotFound from "./pages/NotFound";
 const PublicInvitation = lazy(() => import("./pages/PublicInvitation"));
+const PublicDocument = lazy(() => import("./pages/PublicDocument"));
 import WorkspaceShell from "./layouts/WorkspaceShell";
 import WorkspaceHome from "./pages/workspace/WorkspaceHome";
 import ModulePage from "./pages/workspace/ModulePage";
@@ -68,6 +69,7 @@ const workspaceRoutes = (kind: WorkspaceKind) => (
     <Route path="suscripcion" element={<SubscriptionPage />} />
     <Route path="configuracion" element={<WorkspaceSettings />} />
     <Route path="m/:moduleKey" element={<ModulePage />} />
+    <Route path="m/:moduleKey/:itemId" element={<ModulePage />} />
     <Route path="imprimir/:doc" element={<Suspense fallback={<FullPageSpinner />}><PrintPage /></Suspense>} />
   </Route>
 );
@@ -79,6 +81,8 @@ export default function App() {
       <Route path="/acceso" element={<Login />} />
       <Route path="/registro" element={<Register />} />
       <Route path="/i/:token" element={<Suspense fallback={<FullPageSpinner />}><PublicInvitation /></Suspense>} />
+      <Route path="/q/:token" element={<Suspense fallback={<FullPageSpinner />}><PublicDocument kind="quote" /></Suspense>} />
+      <Route path="/k/:token" element={<Suspense fallback={<FullPageSpinner />}><PublicDocument kind="contract" /></Suspense>} />
 
       <Route element={<RequireAuth />}>
         <Route path="/cambiar-clave" element={<ChangePassword />} />

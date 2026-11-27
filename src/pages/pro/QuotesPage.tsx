@@ -9,7 +9,7 @@ import { QUOTE_STATUS, docNumber, quoteUrl, useCustomers, useQuotes, waNumber, t
 import { formatDate, formatMoney } from "@/lib/format";
 import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
-import { Alert, Badge, Button, Card, CardHeader, EmptyState, Field, Input, PageHeader, Select, Spinner, Textarea, cx } from "@/components/ui";
+import { Alert, Badge, Button, Card, CardHeader, EmptyState, Field, Input, PageHeader, Select, Spinner, Textarea } from "@/components/ui";
 import { PaymentDialog } from "./FinancePage";
 
 export default function QuotesPage() {
@@ -292,7 +292,6 @@ function QuoteEditor({ id }: { id: string }) {
       </div>
       {paying && <PaymentDialog defaults={{ customer_id: q.customer_id, event_id: q.event_id, quote_id: q.id, currency_code: q.currency_code, amount: deposit || undefined }}
         onClose={() => setPaying(false)} onSaved={() => { setPaying(false); setMsg({ tone: "ok", text: "Pago registrado." }); }} />}
-      {cx() /* noop para mantener import */}
     </div>
   );
 }

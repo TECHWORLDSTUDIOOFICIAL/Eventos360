@@ -7,6 +7,8 @@ import { daysUntil, formatDate } from "@/lib/format";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { Alert, Badge, Card, CardHeader, PageHeader, Stat } from "@/components/ui";
 import PersonalHome from "@/pages/personal/PersonalHome";
+import ProHome from "@/pages/pro/ProHome";
+import { EVENT_SCOPED } from "./moduleRegistry";
 
 const INTRO = {
   personal: "Este es el centro de tu celebración. Aquí verás la cuenta regresiva, tu presupuesto, tus invitados y lo que falta por hacer.",
@@ -21,6 +23,7 @@ const INTRO = {
 export default function WorkspaceHome() {
   const { ws } = useWorkspace();
   if (ws.kind === "personal") return <PersonalHome />;
+  if (ws.kind === "professional") return <ProHome />;
   return <GenericHome />;
 }
 
@@ -30,7 +33,7 @@ function GenericHome() {
   const meta = MODALITIES[ws.kind];
   const left = daysUntil(ws.period_end);
   const homeKey = ws.kind === "personal" ? "home" : "dashboard";
-  const pending = modules.filter((m) => m.module_key !== homeKey);
+  const pending = modules.filter((m) => m.module_key !== homeKey && !(EVENT_SCOPED[ws.kind] ?? []).includes(m.module_key));
   const base = workspacePath(ws.kind, ws.id);
 
   return (

@@ -36,7 +36,7 @@ function EventList() {
   const [creating, setCreating] = useState(params.get("nuevo") === "1");
   const navigate = useNavigate();
   const now = Date.now();
-  const custName = (id: string | null) => customers?.find((c) => c.id === id)?.name;
+  const custName = (id: string | null | undefined) => customers?.find((c) => c.id === id)?.name;
   const list = useMemo(() => (data ?? []).filter((e) => {
     const t = e.starts_at ? new Date(e.starts_at).getTime() : Infinity;
     if (when === "upcoming" && (t < now - 86_400_000 || e.status === "done")) return false;
