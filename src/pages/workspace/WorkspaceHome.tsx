@@ -8,6 +8,7 @@ import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { Alert, Badge, Card, CardHeader, PageHeader, Stat } from "@/components/ui";
 import PersonalHome from "@/pages/personal/PersonalHome";
 import ProHome from "@/pages/pro/ProHome";
+import BusinessHome from "@/pages/business/BusinessHome";
 import { EVENT_SCOPED } from "./moduleRegistry";
 
 const INTRO = {
@@ -24,6 +25,13 @@ export default function WorkspaceHome() {
   const { ws } = useWorkspace();
   if (ws.kind === "personal") return <PersonalHome />;
   if (ws.kind === "professional") return <ProHome />;
+  return <BusinessOrGeneric />;
+}
+
+function BusinessOrGeneric() {
+  const { modules } = useWorkspace();
+  // Negocios con inventario (alquiler, decoración, sonido, vestidos…) tienen su panel operativo.
+  if (modules.some((m) => m.module_key === "reservations" || m.module_key === "inventory")) return <BusinessHome />;
   return <GenericHome />;
 }
 

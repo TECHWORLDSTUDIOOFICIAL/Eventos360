@@ -21,7 +21,7 @@ export interface WorkspaceContext {
   region: WorkspaceRegion;
   modules: WorkspaceModule[];
   canManage: boolean;      // propietario o administrador
-  readOnly: boolean;       // suscripción suspendida/cancelada
+  readOnly: boolean;       // suscripción suspendida/cancelada o rol de solo lectura
 }
 
 export const useWorkspace = () => useOutletContext<WorkspaceContext>();
@@ -51,7 +51,9 @@ export default function WorkspaceShell({ kind }: { kind: WorkspaceKind }) {
 
   const meta = MODALITIES[kind];
   const status = ws.subscription_status;
-  const readOnly = status === "suspended" || status === "canceled";
+  // Solo lectura: suscripción suspendida/cancelada, o miembro con rol de consulta.
+  const suspended = status === "suspended" || status === "canceled";
+  const readOnly = suspended || ws.role === "viewer";
   const canManage = ws.role === "owner" || ws.role === "admin";
   const base = workspacePath(kind, ws.id);
   const left = daysUntil(ws.period_end);
@@ -128,11 +130,11 @@ export default function WorkspaceShell({ kind }: { kind: WorkspaceKind }) {
       )}
 
       <div className="min-w-0">
-        {(status === "past_due" || readOnly || (left !== null && left <= 7 && left >= 0)) && (
+        {(status === "past_due" || suspended || (left !== null && left <= 7 && left >= 0)) && (
           <div className="px-4 pt-4 sm:px-8 print:hidden">
             <Alert
-              tone={readOnly ? "danger" : "warn"}
-              title={readOnly ? "Tu suscripción está suspendida: el espacio está en modo solo lectura." :
+              tone={suspended ? "danger" : "warn"}
+              title={suspended ? "Tu suscripción está suspendida: el espacio está en modo solo lectura." :
                 status === "past_due" ? "Tu suscripción venció. Renueva para no perder el acceso de escritura." :
                 `Tu suscripción vence el ${formatDate(ws.period_end)}.`}
             >

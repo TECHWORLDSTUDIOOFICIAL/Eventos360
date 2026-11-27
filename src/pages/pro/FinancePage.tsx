@@ -173,7 +173,7 @@ export default function FinancePage() {
 }
 
 export function PaymentDialog({ payment, defaults, onClose, onSaved }: {
-  payment?: Payment | null; defaults?: Partial<Pick<Payment, "customer_id" | "event_id" | "quote_id" | "currency_code" | "amount">>;
+  payment?: Payment | null; defaults?: Partial<Pick<Payment, "customer_id" | "event_id" | "quote_id" | "rental_id" | "currency_code" | "amount" | "kind">>;
   onClose: () => void; onSaved: () => void;
 }) {
   const { ws, region } = useWorkspace();
@@ -183,7 +183,7 @@ export function PaymentDialog({ payment, defaults, onClose, onSaved }: {
   const { data: quotes } = useQuotes(ws.id);
   const [f, setF] = useState({
     customer_id: payment?.customer_id ?? defaults?.customer_id ?? "", event_id: payment?.event_id ?? defaults?.event_id ?? "",
-    quote_id: payment?.quote_id ?? defaults?.quote_id ?? "", kind: payment?.kind ?? "deposit",
+    quote_id: payment?.quote_id ?? defaults?.quote_id ?? "", rental_id: payment?.rental_id ?? defaults?.rental_id ?? "", kind: payment?.kind ?? defaults?.kind ?? "deposit",
     amount: String(payment?.amount ?? defaults?.amount ?? ""), currency_code: payment?.currency_code ?? defaults?.currency_code ?? region.currency_code,
     method: payment?.method ?? "transferencia", reference: payment?.reference ?? "", paid_at: payment?.paid_at ?? new Date().toISOString().slice(0, 10), notes: payment?.notes ?? "",
   });
@@ -196,12 +196,13 @@ export function PaymentDialog({ payment, defaults, onClose, onSaved }: {
     if (!f.customer_id) return setError("Elige el cliente.");
     if (!(Number(f.amount) > 0)) return setError("Ingresa un monto válido.");
     setBusy(true);
-    const row = { customer_id: f.customer_id, event_id: f.event_id || null, quote_id: f.quote_id || null, kind: f.kind, amount: Number(f.amount),
+    const row = { customer_id: f.customer_id, event_id: f.event_id || null, quote_id: f.quote_id || null, rental_id: f.rental_id || null, kind: f.kind, amount: Number(f.amount),
       currency_code: f.currency_code, method: f.method, reference: f.reference.trim() || null, paid_at: f.paid_at, notes: f.notes.trim() || null };
     const res = payment ? await supabase.from("customer_payments").update(row).eq("id", payment.id) : await supabase.from("customer_payments").insert({ ...row, workspace_id: ws.id });
     setBusy(false);
     if (res.error) return setError(res.error.message);
     await qc.invalidateQueries({ queryKey: ["payments", ws.id] });
+    await qc.invalidateQueries({ queryKey: ["rental-payments"] });
     onSaved();
   }
   async function remove() {
@@ -220,7 +221,7 @@ export function PaymentDialog({ payment, defaults, onClose, onSaved }: {
         <Button type="submit" form="payment-form" variant="accent" loading={busy}>Guardar</Button>
       </>}>
       <form id="payment-form" onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
-        <Field label="Cliente">{(id) => <Select id={id} value={f.customer_id} onChange={(e) => setF((s) => ({ ...s, customer_id: e.target.value, event_id: "", quote_id: "" }))}><option value="">Elegir…</option>{(customers ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>}</Field>
+        <Field label="Cliente">{(id) => <Select id={id} value={f.customer_id} onChange={(e) => setF((s) => ({ ...s, customer_id: e.target.value, event_id: "", quote_id: "", rental_id: "" }))}><option value="">Elegir…</option>{(customers ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>}</Field>
         <Field label="Evento" optional>{(id) => <Select id={id} value={f.event_id} onChange={(e) => set("event_id", e.target.value)}><option value="">Sin evento</option>{(events ?? []).filter((e) => e.customer_id === f.customer_id).map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</Select>}</Field>
         <Field label="Cotización" optional>{(id) => <Select id={id} value={f.quote_id} onChange={(e) => set("quote_id", e.target.value)}><option value="">Ninguna</option>{(quotes ?? []).filter((q) => q.customer_id === f.customer_id).map((q) => <option key={q.id} value={q.id}>{docNumber("COT", q.number)} · {q.title}</option>)}</Select>}</Field>
         <Field label="Tipo">{(id) => <Select id={id} value={f.kind} onChange={(e) => set("kind", e.target.value)}>{Object.entries(PAYMENT_KIND).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>}</Field>

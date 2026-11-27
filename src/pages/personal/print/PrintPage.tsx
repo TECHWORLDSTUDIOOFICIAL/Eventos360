@@ -14,6 +14,7 @@ const EVENT_DOCS = {
 
 const PrintQuote = lazy(() => import("@/pages/pro/print/PrintQuote"));
 const PrintContract = lazy(() => import("@/pages/pro/print/PrintContract"));
+const PrintRental = lazy(() => import("@/pages/business/print/PrintRental"));
 
 /**
  * Documentos imprimibles. Los del evento usan ?evento=<id> (o el evento activo en Personal);
@@ -28,6 +29,8 @@ export default function PrintPage() {
 
   if (doc === "cotizacion" && id && has("quotes")) return <Suspense fallback={<Spinner />}><PrintQuote id={id} /></Suspense>;
   if (doc === "contrato" && id && has("contracts")) return <Suspense fallback={<Spinner />}><PrintContract id={id} /></Suspense>;
+  if (doc === "alquiler" && id && (has("reservations") || has("deliveries") || has("returns")))
+    return <Suspense fallback={<Spinner />}><PrintRental id={id} kind={params.get("tipo") === "entrega" ? "entrega" : "orden"} /></Suspense>;
 
   const d = EVENT_DOCS[doc as keyof typeof EVENT_DOCS];
   if (!d || !has(d.module)) return <NotFound />;

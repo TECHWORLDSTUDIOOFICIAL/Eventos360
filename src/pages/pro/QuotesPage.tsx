@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, Copy, FileSignature, FileText, ImagePlus, MessageCircle, Plus, Printer, Search, Send, Trash2, Wallet, X } from "lucide-react";
+import { ArrowLeft, CalendarCheck, Check, Copy, FileSignature, FileText, ImagePlus, MessageCircle, Plus, Printer, Search, Send, Trash2, Wallet, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { unwrap } from "@/lib/queries";
 import { publicMediaUrl, uploadImage, useEvents } from "@/lib/events";
 import { DEFAULT_QUOTE_INTRO, DEFAULT_QUOTE_TERMS, QUOTE_STATUS, QUOTE_TEMPLATES, docNumber, quoteUrl, useCustomers, useQuotes, waNumber, type Quote, type QuoteItem, type QuoteTemplate } from "@/lib/pro";
+import { useResources } from "@/lib/rental";
 import { formatDate, formatMoney } from "@/lib/format";
 import { workspacePath } from "@/lib/modalities";
 import { useWorkspace } from "@/layouts/WorkspaceShell";
@@ -133,7 +134,10 @@ function NewQuote() {
 }
 
 function QuoteEditor({ id }: { id: string }) {
-  const { ws, region, readOnly } = useWorkspace();
+  const { ws, region, readOnly, modules } = useWorkspace();
+  const hasInventory = modules.some((m) => m.module_key === "inventory");
+  const hasRentals = modules.some((m) => m.module_key === "reservations");
+  const { data: resources } = useResources(ws.id);
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { data: customers } = useCustomers(ws.id);
@@ -141,7 +145,7 @@ function QuoteEditor({ id }: { id: string }) {
   const quote = useQuery({ queryKey: ["quote", id], queryFn: async () => unwrap<Quote>(await supabase.from("quotes").select("*").eq("id", id).single()) });
   const items = useQuery({ queryKey: ["quote-items", id], queryFn: async () => unwrap<QuoteItem[]>(await supabase.from("quote_items").select("*").eq("quote_id", id).order("sort").order("id")) });
   const [f, setF] = useState<Partial<Quote>>({});
-  const [line, setLine] = useState({ description: "", quantity: "1", unit_price: "", discount_pct: "0" });
+  const [line, setLine] = useState({ description: "", quantity: "1", unit_price: "", discount_pct: "0", resource_id: "", details: "" });
   const [msg, setMsg] = useState<{ tone: "ok" | "danger" | "info"; text: string } | null>(null);
   const [paying, setPaying] = useState(false);
   useEffect(() => { if (quote.data) setF(quote.data); }, [quote.data]);
@@ -175,9 +179,10 @@ function QuoteEditor({ id }: { id: string }) {
     const { error } = await supabase.from("quote_items").insert({
       workspace_id: ws.id, quote_id: id, description: line.description.trim(), quantity: Number(line.quantity) || 1,
       unit_price: Number(line.unit_price) || 0, discount_pct: Number(line.discount_pct) || 0, sort: nextSort,
+      resource_id: line.resource_id || null, details: line.details || null,
     });
     if (error) return setMsg({ tone: "danger", text: error.message });
-    setLine({ description: "", quantity: "1", unit_price: "", discount_pct: "0" });
+    setLine({ description: "", quantity: "1", unit_price: "", discount_pct: "0", resource_id: "", details: "" });
     await refresh();
   }
   async function updateLine(it: QuoteItem, patch: Partial<QuoteItem>) {
@@ -230,6 +235,7 @@ function QuoteEditor({ id }: { id: string }) {
           {!readOnly && q.status === "draft" && <Button variant="accent" icon={<Send className="size-4" />} onClick={() => void send()}>Marcar como enviada</Button>}
           {!readOnly && q.status === "sent" && <Button variant="secondary" icon={<Check className="size-4" />} onClick={() => void markAccepted()}>Registrar aceptación</Button>}
           {!readOnly && q.status === "accepted" && <>
+            {hasRentals && <Link to={base(`m/reservations/nueva?cotizacion=${id}`)}><Button variant="secondary" icon={<CalendarCheck className="size-4" />}>Crear reservación</Button></Link>}
             <Link to={base(`m/contracts/nuevo?cotizacion=${id}`)}><Button variant="secondary" icon={<FileSignature className="size-4" />}>Crear contrato</Button></Link>
             <Button variant="accent" icon={<Wallet className="size-4" />} onClick={() => setPaying(true)}>Registrar pago</Button>
           </>}
@@ -276,6 +282,15 @@ function QuoteEditor({ id }: { id: string }) {
             </ul>
             {!locked && (
               <form onSubmit={addLine} className="grid gap-2 border-t border-line bg-paper/50 p-4 sm:grid-cols-[1fr_80px_120px_80px_auto]">
+                {hasInventory && !!resources?.length && (
+                  <Select className="sm:col-span-5" value={line.resource_id} aria-label="Agregar del inventario" onChange={(e) => {
+                    const r = resources.find((x) => x.id === e.target.value);
+                    setLine((s) => r ? { ...s, resource_id: r.id, description: r.name, unit_price: String(r.rent_price), details: r.description ?? "" } : { ...s, resource_id: "", details: "" });
+                  }}>
+                    <option value="">Del inventario (opcional)…</option>
+                    {resources.map((r) => <option key={r.id} value={r.id}>{r.name} · {formatMoney(Number(r.rent_price), r.currency_code, region.locale)}</option>)}
+                  </Select>
+                )}
                 <Input value={line.description} onChange={(e) => setLine((s) => ({ ...s, description: e.target.value }))} placeholder="Nuevo servicio, producto u opción" aria-label="Nueva descripción" />
                 <Input type="number" min="0.01" step="0.01" value={line.quantity} onChange={(e) => setLine((s) => ({ ...s, quantity: e.target.value }))} aria-label="Cantidad" className="text-right" />
                 <Input type="number" min="0" step="0.01" value={line.unit_price} onChange={(e) => setLine((s) => ({ ...s, unit_price: e.target.value }))} placeholder="Precio" aria-label="Precio unitario" className="text-right" />

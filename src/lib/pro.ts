@@ -16,7 +16,7 @@ export interface Quote {
   template: QuoteTemplate; intro: string | null;
 }
 export interface QuoteItem {
-  id: string; quote_id: string; sort: number; description: string; details: string | null; image_path: string | null;
+  id: string; quote_id: string; sort: number; description: string; details: string | null; image_path: string | null; resource_id?: string | null;
   quantity: number; unit_price: number; discount_pct: number; line_total: number;
 }
 export type QuoteTemplate = "clasica" | "catalogo" | "elegante";
@@ -28,7 +28,7 @@ export interface Contract {
   template: ContractStyle; include_provider_signature: boolean; accepted_signature: string | null;
 }
 export interface Payment {
-  id: string; customer_id: string; event_id: string | null; quote_id: string | null; kind: "deposit" | "installment" | "final" | "other";
+  id: string; customer_id: string; event_id: string | null; quote_id: string | null; rental_id?: string | null; kind: "deposit" | "installment" | "final" | "other";
   amount: number; currency_code: string; method: string; reference: string | null; paid_at: string; notes: string | null;
 }
 export interface CalendarItem {
@@ -113,7 +113,8 @@ export function fillTemplate(body: string, vars: Record<string, string>) {
 export const TEMPLATE_VARS: [string, string][] = [
   ["cliente", "Nombre del cliente"], ["cliente_identificacion", "Cédula / RUC del cliente"], ["cliente_direccion", "Dirección del cliente"],
   ["evento", "Nombre del evento"], ["fecha_evento", "Fecha del evento"], ["lugar", "Lugar del evento"], ["invitados", "Invitados estimados"],
-  ["monto", "Monto total"], ["anticipo", "Anticipo"], ["organizador", "Tu nombre comercial"], ["organizador_identificacion", "Tu RUC / cédula"], ["fecha_hoy", "Fecha de hoy"],
+  ["monto", "Monto total"], ["anticipo", "Anticipo"], ["articulos", "Artículos y cantidades"], ["fecha_entrega", "Fecha de entrega"],
+  ["fecha_devolucion", "Fecha de devolución"], ["deposito", "Depósito de garantía"], ["organizador", "Tu nombre comercial"], ["organizador_identificacion", "Tu RUC / cédula"], ["fecha_hoy", "Fecha de hoy"],
 ];
 
 export const QUOTE_TEMPLATES: Record<QuoteTemplate, { name: string; description: string }> = {
@@ -203,13 +204,13 @@ ${BASE_CLOSING}`,
 
 Entre {{organizador}}, identificado con {{organizador_identificacion}}, en adelante "EL ARRENDADOR", y {{cliente}}, identificado con {{cliente_identificacion}}, con domicilio en {{cliente_direccion}}, en adelante "EL ARRENDATARIO", se acuerda el siguiente contrato de alquiler:
 
-PRIMERA. OBJETO. EL ARRENDADOR entrega en alquiler a EL ARRENDATARIO el mobiliario y equipo detallado en la cotización aceptada, que forma parte de este contrato, para ser utilizado en el evento "{{evento}}", el {{fecha_evento}}, en {{lugar}}.
+PRIMERA. OBJETO. EL ARRENDADOR entrega en alquiler a EL ARRENDATARIO el siguiente mobiliario y equipo: {{articulos}}; para ser utilizado en el evento "{{evento}}", el {{fecha_evento}}, en {{lugar}}.
 
 SEGUNDA. PRECIO Y PAGO. El valor del alquiler es de {{monto}}. EL ARRENDATARIO pagará un anticipo de {{anticipo}} para reservar los artículos. El saldo se cancelará al momento de la entrega.
 
-TERCERA. ENTREGA Y DEVOLUCIÓN. Los artículos se entregarán y recogerán en las fechas y horarios acordados por escrito. EL ARRENDATARIO, o la persona que designe, revisará la cantidad y el estado de los artículos al recibirlos. A la devolución se verificarán nuevamente.
+TERCERA. ENTREGA Y DEVOLUCIÓN. Los artículos se entregarán el {{fecha_entrega}} y se recogerán el {{fecha_devolucion}}, salvo otro acuerdo por escrito. EL ARRENDATARIO, o la persona que designe, revisará la cantidad y el estado de los artículos al recibirlos. A la devolución se verificarán nuevamente.
 
-CUARTA. DEPÓSITO DE GARANTÍA. EL ARRENDADOR podrá solicitar un depósito de garantía, que será devuelto íntegramente una vez revisados los artículos, descontando, si los hubiera, los daños, faltantes o cargos por limpieza extraordinaria.
+CUARTA. DEPÓSITO DE GARANTÍA. EL ARRENDATARIO entregará un depósito de garantía de {{deposito}}, que será devuelto íntegramente una vez revisados los artículos, descontando, si los hubiera, los daños, faltantes o cargos por limpieza extraordinaria.
 
 QUINTA. CUIDADO DE LOS ARTÍCULOS. EL ARRENDATARIO se obliga a usar los artículos solo para el fin acordado, no subarrendarlos ni trasladarlos a otro lugar, y protegerlos de la lluvia, el fuego y el mal uso.
 

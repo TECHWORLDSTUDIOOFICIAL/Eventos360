@@ -44,7 +44,7 @@ function Logo({ b, size = 64, className }: { b: DocBusiness; size?: number; clas
   return <img src={b.logo_url} alt="" className={cx("object-contain", className)} style={{ width: size, height: size }} />;
 }
 
-function HeaderClassic({ b, kind, number }: { b: DocBusiness; kind: string; number: string }) {
+export function HeaderClassic({ b, kind, number }: { b: DocBusiness; kind: string; number: string }) {
   return (
     <header className="flex items-start justify-between gap-6 pb-5" style={{ borderBottom: `3px solid ${brand(b)}` }}>
       <div className="flex items-start gap-4">

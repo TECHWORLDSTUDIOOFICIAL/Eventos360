@@ -39,17 +39,17 @@ export const MODULES: Record<string, ModuleMeta> = {
   contracts: m(FileSignature, "Contratos a partir de plantillas, con aceptación registrada.", 3),
   calendar: m(CalendarDays, "Calendario de eventos, reuniones, entregas y pagos, con alertas de conflicto.", 3),
   finance: m(BadgeDollarSign, "Ingresos, anticipos, saldos, gastos y rentabilidad por evento.", 3),
-  reports: m(BarChart3, "Reportes de tu operación.", 3),
-  team: m(UserCog, "Usuarios de tu empresa y sus permisos.", 4),
+  reports: m(BarChart3, "Reportes de tu operación.", 5),
+  team: m(UserCog, "Usuarios de tu empresa y sus permisos.", null),
   // Business especializados
-  catalog: m(Tag, "Catálogo de productos y servicios que ofreces.", 4),
-  packages: m(Package, "Paquetes compuestos con cálculo de costo y precio de venta.", 4),
-  inventory: m(Boxes, "Existencias, unidades disponibles, reservadas, dañadas y en mantenimiento.", 4),
-  reservations: m(CalendarCheck, "Reservaciones por fecha con control de disponibilidad.", 4),
-  availability: m(ClipboardCheck, "Calendario de disponibilidad: evita sobreventas y reservas duplicadas.", 4),
-  deliveries: m(Truck, "Entregas, transporte y control de salida.", 4),
-  returns: m(RotateCcw, "Devoluciones, revisión y depósitos de garantía.", 4),
-  maintenance: m(Wrench, "Daños, limpieza y mantenimiento.", 4),
+  catalog: m(Tag, "Catálogo de productos y servicios que ofreces.", 5),
+  packages: m(Package, "Paquetes compuestos con cálculo de costo y precio de venta.", 5),
+  inventory: m(Boxes, "Existencias, unidades disponibles, reservadas, dañadas y en mantenimiento.", null),
+  reservations: m(CalendarCheck, "Reservaciones por fecha con control de disponibilidad.", null),
+  availability: m(ClipboardCheck, "Calendario de disponibilidad: evita sobreventas y reservas duplicadas.", null),
+  deliveries: m(Truck, "Entregas, transporte y control de salida.", null),
+  returns: m(RotateCcw, "Devoluciones, revisión y depósitos de garantía.", null),
+  maintenance: m(Wrench, "Daños, limpieza y mantenimiento.", null),
   installations: m(Hammer, "Montajes, instalación y desmontaje.", 7),
   venues: m(Building2, "Espacios: capacidad, características, fotos y reglas de uso.", 7),
   venue_rates: m(Receipt, "Tarifas por día, temporada, horario, duración y tipo de evento.", 7),
@@ -72,12 +72,13 @@ export const SPECIALTY_ICONS: Record<string, LucideIcon> = {
 const IMPLEMENTED: Record<string, string[]> = {
   personal: ["home", "my_event", "guests", "invitations", "budget", "suppliers", "seating", "schedule", "tasks", "inspiration"],
   professional: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget"],
+  business: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget",
+    "inventory", "reservations", "availability", "deliveries", "returns", "maintenance", "team"],
 };
 
 export function moduleMeta(key: string, kind?: string): ModuleMeta {
   const base = MODULES[key] ?? m(Package, "", 9);
   if (kind && IMPLEMENTED[kind]?.includes(key)) return { ...base, stage: null };
-  // En Profesional/Business los módulos de eventos se construyen en la etapa 3.
-  if (kind === "business" && key !== "dashboard" && (base.stage === null || base.stage <= 3)) return { ...base, stage: 4 };
+  if (kind && base.stage === null) return { ...base, stage: 5 };   // existe en otra modalidad, aquí aún no
   return base;
 }
