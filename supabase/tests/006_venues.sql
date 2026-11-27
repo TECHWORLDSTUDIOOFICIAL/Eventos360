@@ -17,7 +17,7 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a9
 do $$ begin
   if not exists (select 1 from public.workspace_modules_for((select v::uuid from t_ctx where k='wa')) where module_key = 'bookings')
      or not exists (select 1 from public.workspace_modules_for((select v::uuid from t_ctx where k='wa')) where module_key = 'venue_calendar')
-     or exists (select 1 from public.workspace_modules_for((select v::uuid from t_ctx where k='wa')) where module_key in ('reservations','maintenance')) then
+     or exists (select 1 from public.workspace_modules_for((select v::uuid from t_ctx where k='wa')) where module_key in ('reservations','availability')) then
     raise exception 'FALLO: módulos de la especialidad locales';
   end if;
 end $$;

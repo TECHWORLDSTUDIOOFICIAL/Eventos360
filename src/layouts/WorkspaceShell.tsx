@@ -61,7 +61,9 @@ export default function WorkspaceShell({ kind }: { kind: WorkspaceKind }) {
   const homeKey = kind === "personal" ? "home" : "dashboard";
   const hidden = EVENT_SCOPED[kind] ?? [];
   // El menú muestra solo herramientas que ya funcionan; en Profesional y Business, agrupadas por secciones.
-  const navModules = (modules ?? []).filter((m) => m.module_key !== homeKey && !hidden.includes(m.module_key) && isModuleReady(m.module_key, kind));
+  const hasInventory = (modules ?? []).some((m) => m.module_key === "inventory");
+  const navModules = (modules ?? []).filter((m) => m.module_key !== homeKey && !hidden.includes(m.module_key) && isModuleReady(m.module_key, kind)
+    && (m.module_key !== "maintenance" || hasInventory));   // "Daños y mantenimiento" es del inventario
   const sections = kind === "personal" ? [{ title: "", items: navModules }]
     : [...NAV_GROUPS.map((g) => ({ title: g.title, items: navModules.filter((m) => g.keys.includes(m.module_key)) })),
        { title: "Más", items: navModules.filter((m) => !NAV_GROUPS.some((g) => g.keys.includes(m.module_key))) }].filter((s) => s.items.length);

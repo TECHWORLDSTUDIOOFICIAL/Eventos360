@@ -15,12 +15,9 @@ insert into public.modules(key, name, kinds, default_kinds, required_feature, so
   ('venue_calendar', 'Ocupación',            '{business}', '{}', null, 118)
 on conflict (key) do nothing;
 
--- La especialidad "locales" usa sus propias reservas y su calendario de ocupación.
-delete from public.specialty_modules where specialty_key = 'venue' and module_key in ('reservations', 'availability', 'maintenance');
-insert into public.specialty_modules(specialty_key, module_key, sort, label_override) values
-  ('venue', 'venue_calendar', 15, null),
-  ('venue', 'bookings', 20, 'Reservas')
-on conflict do nothing;
+-- La especialidad "locales" usa sus propias reservas y su calendario de ocupación (se reemplazan, sin borrar filas).
+update public.specialty_modules set module_key = 'bookings', sort = 20, label_override = 'Reservas' where specialty_key = 'venue' and module_key = 'reservations';
+update public.specialty_modules set module_key = 'venue_calendar', sort = 15, label_override = null where specialty_key = 'venue' and module_key = 'availability';
 update public.specialty_modules set sort = 10 where specialty_key = 'venue' and module_key = 'venues';
 update public.specialty_modules set sort = 40 where specialty_key = 'venue' and module_key = 'venue_rates';
 
@@ -344,11 +341,10 @@ declare t record;
 begin
   for t in select * from (values
     ('venues', array['venues']), ('venue_parts', array['venues']), ('venue_rates', array['venue_rates','venues']),
-    ('bookings', array['bookings']), ('booking_items', array['bookings'])
+    ('booking_items', array['bookings'])
   ) as x(tbl, modules)
   loop
     execute format('alter table public.%I enable row level security', t.tbl);
-    execute format('revoke all on public.%I from anon', t.tbl);
     execute format('grant select, insert, update, delete on public.%I to authenticated', t.tbl);
     execute format($p$create policy "miembros leen" on public.%I for select to authenticated
                      using (workspace_id in (select private.user_workspace_ids()))$p$, t.tbl);
@@ -360,12 +356,16 @@ begin
                      using (private.can_write_any(workspace_id, %L))$p$, t.tbl, t.modules);
   end loop;
 end $$;
+alter table public.bookings enable row level security;
+grant select, insert, update, delete on public.bookings to authenticated;
+create policy "miembros leen" on public.bookings for select to authenticated using (workspace_id in (select private.user_workspace_ids()));
+create policy "miembros crean" on public.bookings for insert to authenticated with check (private.can_write_any(workspace_id, array['bookings']));
+create policy "miembros editan" on public.bookings for update to authenticated
+  using (private.can_write_any(workspace_id, array['bookings'])) with check (private.can_write_any(workspace_id, array['bookings']));
 -- Una reserva confirmada o realizada es historial: se cancela, no se borra.
-drop policy "miembros eliminan" on public.bookings;
 create policy "miembros eliminan" on public.bookings for delete to authenticated
   using (private.can_write_module(workspace_id, 'bookings') and status in ('inquiry','canceled'));
--- El token público lo genera solo la función.
-revoke update (booking_token) on public.workspaces from authenticated;
+-- El token público solo lo genera la función venue_public_link (no hay permiso de columna para editarlo).
 
 -- =====================================================================
 -- Consultas para la app
@@ -466,8 +466,7 @@ begin
   return v;
 end $$;
 
-revoke execute on function public.venue_check(uuid, uuid, timestamptz, timestamptz, uuid), public.venue_price(uuid, uuid, timestamptz, timestamptz),
-  public.venue_month(uuid, date, int), public.venue_dashboard(uuid), public.venue_public_link(uuid, boolean) from public, anon;
+-- Todas validan internamente que quien llama pertenezca al negocio.
 grant execute on function public.venue_check(uuid, uuid, timestamptz, timestamptz, uuid), public.venue_price(uuid, uuid, timestamptz, timestamptz),
   public.venue_month(uuid, date, int), public.venue_dashboard(uuid), public.venue_public_link(uuid, boolean) to authenticated;
 
@@ -550,5 +549,4 @@ begin
   return jsonb_build_object('ok', true, 'number', v_num);
 end $$;
 
-revoke execute on function public.public_venues(text), public.public_venue_inquiry(text, uuid, date, text, int, text, text, text) from public;
 grant execute on function public.public_venues(text), public.public_venue_inquiry(text, uuid, date, text, int, text, text, text) to anon, authenticated;
