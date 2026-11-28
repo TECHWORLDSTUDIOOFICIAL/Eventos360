@@ -10,6 +10,7 @@ import Workspaces from "./pages/Workspaces";
 import NotFound from "./pages/NotFound";
 const PublicInvitation = lazy(() => import("./pages/PublicInvitation"));
 const PublicDocument = lazy(() => import("./pages/PublicDocument"));
+const PublicWorker = lazy(() => import("./pages/PublicWorker"));
 const PublicVenues = lazy(() => import("./pages/PublicVenues"));
 import WorkspaceShell from "./layouts/WorkspaceShell";
 import WorkspaceHome from "./pages/workspace/WorkspaceHome";
@@ -85,6 +86,7 @@ export default function App() {
       <Route path="/q/:token" element={<Suspense fallback={<FullPageSpinner />}><PublicDocument kind="quote" /></Suspense>} />
       <Route path="/k/:token" element={<Suspense fallback={<FullPageSpinner />}><PublicDocument kind="contract" /></Suspense>} />
       <Route path="/r/:token" element={<Suspense fallback={<FullPageSpinner />}><PublicVenues /></Suspense>} />
+      <Route path="/t/:token" element={<Suspense fallback={<FullPageSpinner />}><PublicWorker /></Suspense>} />
 
       <Route element={<RequireAuth />}>
         <Route path="/cambiar-clave" element={<ChangePassword />} />

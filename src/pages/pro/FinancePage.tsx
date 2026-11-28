@@ -7,6 +7,7 @@ import { unwrap } from "@/lib/queries";
 import { useEvents } from "@/lib/events";
 import { PAYMENT_KIND, docNumber, useCustomers, usePayments, useQuotes, type Payment } from "@/lib/pro";
 import { useRentals } from "@/lib/rental";
+import { useAssignments, useShifts } from "@/lib/staff";
 import { EXPENSE_CATEGORIES, useBusinessExpenses, type BusinessExpense } from "@/lib/catalog";
 import { CustomerSelect, SupplierSelect } from "@/components/QuickCreate";
 import { useBookings } from "@/lib/venues";
@@ -28,6 +29,8 @@ export default function FinancePage() {
   const { data: rentalRows } = useRentals(ws.id, { statuses: ["reserved", "out", "returned"] });
   const { data: bookingRows } = useBookings(ws.id);
   const { data: expensesBiz } = useBusinessExpenses(ws.id);
+  const { data: shiftRows } = useShifts(ws.id);
+  const { data: assignRows } = useAssignments(ws.id);
   const expenses = useQuery({
     queryKey: ["ws-expenses", ws.id],
     queryFn: async () => unwrap<ExpenseLite[]>(await supabase.from("event_expenses").select("event_id, planned_amount, agreed_amount, paid_amount").eq("workspace_id", ws.id)),
@@ -75,7 +78,12 @@ export default function FinancePage() {
   }, [deals, payments, expensesBiz, currencyTouched, region.currency_code]);
 
   // Costos de cada evento: el mayor entre lo estimado en sus cotizaciones y los gastos registrados en el evento.
-  const eventExpense = (id: string) => (expenses.data ?? []).filter((x) => x.event_id === id).reduce((s, x) => s + Number(x.agreed_amount ?? x.planned_amount), 0);
+  // Personal de turnos: lo que se le paga a cada persona (asistió o está programada), en la moneda elegida.
+  const staffRows = (assignRows ?? []).filter((a) => a.currency_code === currency && Number(a.pay_amount) > 0)
+    .map((a) => ({ pay: Number(a.pay_amount), shift: shiftRows?.find((x) => x.id === a.shift_id) })).filter((x) => x.shift);
+  const staffForEvent = (id: string) => staffRows.filter((x) => x.shift!.event_id === id).reduce((s, x) => s + x.pay, 0);
+  // Costo real registrado de un evento: sus gastos + el personal de sus turnos.
+  const eventExpense = (id: string) => (expenses.data ?? []).filter((x) => x.event_id === id).reduce((s, x) => s + Number(x.agreed_amount ?? x.planned_amount), 0) + staffForEvent(id);
   const byEvent = useMemo(() => {
     const rows = (events ?? []).filter((e) => e.currency_code === currency || deals.some((d) => d.event_id === e.id && d.currency_code === currency)).map((e) => {
       const ds = deals.filter((d) => d.event_id === e.id && d.currency_code === currency);
@@ -96,7 +104,10 @@ export default function FinancePage() {
   const eventIds = new Set(pd.map((d) => d.event_id).filter(Boolean) as string[]);
   // Costos del período: por evento (mayor entre estimado y real) + ventas sin evento (estimado)
   const costOfSales = [...eventIds].reduce((s, id) => s + Math.max(pd.filter((d) => d.event_id === id).reduce((a, d) => a + d.cost, 0), (events ?? []).find((e) => e.id === id)?.currency_code === currency ? eventExpense(id) : 0), 0)
-    + pd.filter((d) => !d.event_id).reduce((s, d) => s + d.cost, 0);
+    + pd.filter((d) => !d.event_id).reduce((s, d) => s + d.cost, 0)
+    // Personal de turnos del período que no está en un evento vendido en el período (alquileres, salones, trabajo interno…)
+    + staffRows.filter((x) => inRange(new Date(x.shift!.starts_at).toISOString().slice(0, 10)) && !(x.shift!.event_id && eventIds.has(x.shift!.event_id))).reduce((s, x) => s + x.pay, 0);
+  const staffInPeriod = staffRows.filter((x) => inRange(new Date(x.shift!.starts_at).toISOString().slice(0, 10))).reduce((s, x) => s + x.pay, 0);
   const overhead = (expensesBiz ?? []).filter((x) => x.currency_code === currency && inRange(x.spent_at)).reduce((s, x) => s + Number(x.amount), 0);
   const result = sales - costOfSales - overhead;
   const collected = (payments ?? []).filter((p) => p.currency_code === currency && inRange(p.paid_at)).reduce((s, p) => s + Number(p.amount), 0);
@@ -148,7 +159,7 @@ export default function FinancePage() {
         <div className="grid gap-px bg-line sm:grid-cols-4">
           {[
             { l: "Ventas (sin IVA)", v: money(sales), h: tax > 0 ? `+ ${money(tax)} de IVA que va a la DGI` : "Cotizaciones aceptadas y reservas" },
-            { l: "Costo de lo vendido", v: `− ${money(costOfSales)}`, h: "Materiales, personal, proveedores" },
+            { l: "Costo de lo vendido", v: `− ${money(costOfSales)}`, h: staffInPeriod > 0 ? `Incluye ${money(staffInPeriod)} de personal en turnos` : "Materiales, personal, proveedores" },
             { l: "Gastos del negocio", v: `− ${money(overhead)}`, h: "Alquiler, salarios, luz…", action: () => setTab("gastos") },
             { l: result >= 0 ? "Te quedó" : "Perdiste", v: money(result), h: sales > 0 ? `${Math.round((result / sales) * 100)}% de lo vendido` : "", strong: true, bad: result < 0 },
           ].map((s) => (
@@ -252,7 +263,7 @@ export default function FinancePage() {
               </table>
             </div>
           )}
-          <p className="border-t border-line px-5 py-3 text-xs text-muted">Venta sin IVA. Costos: el mayor entre lo estimado en las cotizaciones y los gastos registrados en el evento (para no contarlo dos veces). Los gastos fijos del negocio no se reparten por evento.</p>
+          <p className="border-t border-line px-5 py-3 text-xs text-muted">Venta sin IVA. Costos: el mayor entre lo estimado en las cotizaciones y lo real (gastos del evento + personal de sus turnos), para no contarlo dos veces. Los gastos fijos del negocio no se reparten por evento.</p>
         </Card>
       )}
       {editing && <PaymentDialog payment={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={() => setEditing(null)} />}
