@@ -39,7 +39,7 @@ export const MODULES: Record<string, ModuleMeta> = {
   contracts: m(FileSignature, "Contratos a partir de plantillas, con aceptación registrada.", 3),
   calendar: m(CalendarDays, "Calendario de eventos, reuniones, entregas y pagos, con alertas de conflicto.", 3),
   finance: m(BadgeDollarSign, "Ingresos, anticipos, saldos, gastos y rentabilidad por evento.", 3),
-  reports: m(BarChart3, "Reportes de tu operación.", 5),
+  reports: m(BarChart3, "Ventas, costos, ganancia, cobros, gastos y personal del período; en Personal, el reporte de tu evento.", 8),
   team: m(UserCog, "Usuarios de tu empresa y sus permisos.", null),
   // Business especializados
   catalog: m(Tag, "Catálogo de productos y servicios que ofreces.", 5),
@@ -72,9 +72,9 @@ export const SPECIALTY_ICONS: Record<string, LucideIcon> = {
 
 /** Módulos ya implementados por modalidad (el resto indica su etapa). */
 const IMPLEMENTED: Record<string, string[]> = {
-  personal: ["home", "my_event", "guests", "invitations", "budget", "suppliers", "seating", "schedule", "tasks", "inspiration"],
-  professional: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget", "catalog", "packages", "workforce", "shifts"],
-  business: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget", "catalog", "packages", "workforce", "shifts",
+  personal: ["home", "my_event", "guests", "invitations", "budget", "suppliers", "seating", "schedule", "tasks", "inspiration", "reports"],
+  professional: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget", "catalog", "packages", "workforce", "shifts", "reports"],
+  business: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget", "catalog", "packages", "workforce", "shifts", "reports",
     "inventory", "reservations", "availability", "deliveries", "returns", "maintenance", "team", "venues", "venue_rates", "bookings", "venue_calendar"],
 };
 
@@ -92,7 +92,7 @@ export const isModuleReady = (key: string, kind: string) => moduleMeta(key, kind
 const ALL = ["personal", "professional", "business"];
 export const FEATURE_AVAILABLE: Record<string, string[]> = {
   "events.max": ALL, "guests.max": ALL, "invitations.digital": ALL, "exports.excel": ALL, "exports.pdf": ALL,
-  "customers.max": ["professional", "business"], "members.max": ["business"], "resources.max": ["business"], "specialties.max": ["business"],
+  "customers.max": ["professional", "business"], "reports.advanced": ["professional", "business"], "members.max": ["business"], "resources.max": ["business"], "specialties.max": ["business"],
 };
 export const featureReady = (key: string, kind?: string) => !!FEATURE_AVAILABLE[key] && (!kind || FEATURE_AVAILABLE[key]!.includes(kind));
 
