@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CalendarCheck, Check, Copy, FileSignature, FileText, ImagePlus, MessageCircle, Plus, Printer, Search, Send, Trash2, Wallet, X } from "lucide-react";
+import { ArrowLeft, CalendarCheck, Check, Copy, FileSignature, FileText, ImagePlus, MessageCircle, Plus, Printer, Search, Send, Trash2, UtensilsCrossed, Wallet, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { unwrap } from "@/lib/queries";
 import { publicMediaUrl, uploadImage, useEvents } from "@/lib/events";
 import { DEFAULT_QUOTE_INTRO, DEFAULT_QUOTE_TERMS, QUOTE_STATUS, QUOTE_TEMPLATES, docNumber, quoteUrl, useCustomers, useQuotes, waNumber, type Quote, type QuoteItem, type QuoteTemplate } from "@/lib/pro";
 import { useResources } from "@/lib/rental";
 import { marginTone, profit, useCatalog, usePackageItems, usePackages } from "@/lib/catalog";
+import { menuDescription, priceFor, useMenuItems, useMenus, usePriceTiers, useRecipes } from "@/lib/catering";
 import { CustomerSelect, SupplierSelect } from "@/components/QuickCreate";
 import { ProfitSummary } from "@/components/ProfitSummary";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -143,6 +144,12 @@ function QuoteEditor({ id }: { id: string }) {
   const { data: catalog } = useCatalog(ws.id);
   const { data: packages } = usePackages(ws.id);
   const { data: pitems } = usePackageItems(ws.id);
+  const hasMenus = modules.some((m) => m.module_key === "menus");
+  const hasOrders = modules.some((m) => m.module_key === "orders");
+  const { data: menus } = useMenus(ws.id, hasMenus);
+  const { data: menuItems } = useMenuItems(ws.id, hasMenus);
+  const { data: tiers } = usePriceTiers(ws.id, hasMenus);
+  const { data: recipes } = useRecipes(ws.id, hasMenus);
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { data: customers } = useCustomers(ws.id);
@@ -150,7 +157,7 @@ function QuoteEditor({ id }: { id: string }) {
   const quote = useQuery({ queryKey: ["quote", id], queryFn: async () => unwrap<Quote>(await supabase.from("quotes").select("*").eq("id", id).single()) });
   const items = useQuery({ queryKey: ["quote-items", id], queryFn: async () => unwrap<QuoteItem[]>(await supabase.from("quote_items").select("*").eq("quote_id", id).order("sort").order("id")) });
   const [f, setF] = useState<Partial<Quote>>({});
-  const EMPTY_LINE = { description: "", quantity: "1", unit_price: "", discount_pct: "0", resource_id: "", details: "", unit_cost: "", source: "", image_path: "" };
+  const EMPTY_LINE = { description: "", quantity: "1", unit_price: "", discount_pct: "0", resource_id: "", details: "", unit_cost: "", source: "", image_path: "", menu_id: "" };
   const [line, setLine] = useState(EMPTY_LINE);
   const [msg, setMsg] = useState<{ tone: "ok" | "danger" | "info"; text: string } | null>(null);
   const [paying, setPaying] = useState(false);
@@ -187,6 +194,7 @@ function QuoteEditor({ id }: { id: string }) {
       unit_price: Number(line.unit_price) || 0, discount_pct: Number(line.discount_pct) || 0, sort: nextSort,
       resource_id: line.resource_id || null, details: line.details || null, unit_cost: Number(line.unit_cost) || 0, image_path: line.image_path || null,
       catalog_item_id: line.source.startsWith("c:") ? line.source.slice(2) : null, package_id: line.source.startsWith("p:") ? line.source.slice(2) : null,
+      menu_id: line.menu_id || null,
     });
     if (error) return setMsg({ tone: "danger", text: error.message });
     setLine(EMPTY_LINE);
@@ -244,6 +252,7 @@ function QuoteEditor({ id }: { id: string }) {
           {!readOnly && q.status === "sent" && <Button variant="secondary" icon={<Check className="size-4" />} onClick={() => void markAccepted()}>Registrar aceptación</Button>}
           {!readOnly && q.status === "accepted" && <>
             {hasRentals && <Link to={base(`m/reservations/nueva?cotizacion=${id}`)}><Button variant="secondary" icon={<CalendarCheck className="size-4" />}>Crear reservación</Button></Link>}
+            {hasOrders && (items.data ?? []).some((x) => (x as QuoteItem & { menu_id?: string | null }).menu_id) && <Link to={base(`m/orders/nuevo?cotizacion=${id}`)}><Button variant="secondary" icon={<UtensilsCrossed className="size-4" />}>Crear pedido de catering</Button></Link>}
             <Link to={base(`m/contracts/nuevo?cotizacion=${id}`)}><Button variant="secondary" icon={<FileSignature className="size-4" />}>Crear contrato</Button></Link>
             <Button variant="accent" icon={<Wallet className="size-4" />} onClick={() => setPaying(true)}>Registrar pago</Button>
           </>}
@@ -290,12 +299,19 @@ function QuoteEditor({ id }: { id: string }) {
             </ul>
             {!locked && (
               <form onSubmit={addLine} className="grid gap-2 border-t border-line bg-paper/50 p-4 sm:grid-cols-[1fr_80px_120px_80px_auto]">
-                {(!!catalog?.length || !!packages?.length || (hasInventory && !!resources?.length)) && (
+                {(!!catalog?.length || !!packages?.length || !!menus?.length || (hasInventory && !!resources?.length)) && (
                   <Select className="sm:col-span-5" value={line.source} aria-label="Agregar del catálogo" onChange={(e) => {
                     const v = e.target.value;
                     const c = v.startsWith("c:") ? catalog?.find((x) => x.id === v.slice(2)) : undefined;
                     const pk = v.startsWith("p:") ? packages?.find((x) => x.id === v.slice(2)) : undefined;
                     const r = v.startsWith("r:") ? resources?.find((x) => x.id === v.slice(2)) : undefined;
+                    const mn = v.startsWith("m:") ? menus?.find((x) => x.id === v.slice(2)) : undefined;
+                    if (mn) {
+                      const ev = events?.find((x) => x.id === q.event_id);
+                      const guests = Math.max(mn.min_guests, Number(ev?.guests_estimate) || 0);
+                      return setLine({ ...EMPTY_LINE, source: v, menu_id: mn.id, description: mn.name, quantity: String(guests), unit_price: String(priceFor(mn, tiers ?? [], guests)),
+                        unit_cost: String(Math.round(Number(mn.cost_per_person) * 100) / 100), details: menuDescription(mn, menuItems ?? [], recipes ?? []), image_path: mn.image_path ?? "" });
+                    }
                     if (c) setLine({ ...EMPTY_LINE, source: v, description: c.name, unit_price: String(c.price), unit_cost: String(c.cost_total), details: c.description ?? "", image_path: c.image_path ?? "" });
                     else if (pk) {
                       const incl = (pitems ?? []).filter((x) => x.package_id === pk.id).map((x) => `${Number(x.quantity)} ${catalog?.find((c2) => c2.id === x.item_id)?.name ?? ""}`).join(", ");
@@ -304,13 +320,17 @@ function QuoteEditor({ id }: { id: string }) {
                     else setLine(EMPTY_LINE);
                   }}>
                     <option value="">Agregar del catálogo (opcional)…</option>
+                    {!!menus?.length && <optgroup label="Menús (precio por persona)">{menus.filter((x) => x.is_active && x.currency_code === q.currency_code).map((x) => <option key={x.id} value={`m:${x.id}`}>{x.name} · {formatMoney(Number(x.price_per_person), x.currency_code, region.locale)} p/p</option>)}</optgroup>}
                     {!!packages?.length && <optgroup label="Paquetes">{packages.filter((x) => x.is_active).map((x) => <option key={x.id} value={`p:${x.id}`}>{x.name} · {formatMoney(Number(x.price), x.currency_code, region.locale)}</option>)}</optgroup>}
                     {!!catalog?.length && <optgroup label="Catálogo">{catalog.filter((x) => x.is_active).map((x) => <option key={x.id} value={`c:${x.id}`}>{x.name} · {formatMoney(Number(x.price), x.currency_code, region.locale)}</option>)}</optgroup>}
                     {hasInventory && !!resources?.length && <optgroup label="Inventario">{resources.map((x) => <option key={x.id} value={`r:${x.id}`}>{x.name} · {formatMoney(Number(x.rent_price), x.currency_code, region.locale)}</option>)}</optgroup>}
                   </Select>
                 )}
                 <Input value={line.description} onChange={(e) => setLine((s) => ({ ...s, description: e.target.value }))} placeholder="Nuevo servicio, producto u opción" aria-label="Nueva descripción" />
-                <Input type="number" min="0.01" step="0.01" value={line.quantity} onChange={(e) => setLine((s) => ({ ...s, quantity: e.target.value }))} aria-label="Cantidad" className="text-right" />
+                <Input type="number" min="0.01" step="0.01" value={line.quantity} onChange={(e) => {
+                  const qty = e.target.value; const mn = line.menu_id ? menus?.find((x) => x.id === line.menu_id) : undefined;
+                  setLine((s) => ({ ...s, quantity: qty, ...(mn ? { unit_price: String(priceFor(mn, tiers ?? [], Number(qty) || 0)) } : {}) }));
+                }} aria-label="Cantidad" className="text-right" />
                 <Input type="number" min="0" step="0.01" value={line.unit_price} onChange={(e) => setLine((s) => ({ ...s, unit_price: e.target.value }))} placeholder="Precio" aria-label="Precio unitario" className="text-right" />
                 <Input type="number" min="0" max="100" value={line.discount_pct} onChange={(e) => setLine((s) => ({ ...s, discount_pct: e.target.value }))} aria-label="Descuento %" className="text-right" />
                 <Button type="submit" variant="secondary" icon={<Plus className="size-4" />} disabled={!line.description.trim()}>Agregar</Button>

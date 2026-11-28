@@ -8,6 +8,7 @@ import { useEvents } from "@/lib/events";
 import { PAYMENT_KIND, docNumber, useCustomers, usePayments, useQuotes, type Payment } from "@/lib/pro";
 import { useRentals } from "@/lib/rental";
 import { useAssignments, useShifts } from "@/lib/staff";
+import { useCateringOrders, useTastings } from "@/lib/catering";
 import { EXPENSE_CATEGORIES, useBusinessExpenses, type BusinessExpense } from "@/lib/catalog";
 import { CustomerSelect, SupplierSelect } from "@/components/QuickCreate";
 import { useBookings } from "@/lib/venues";
@@ -21,7 +22,9 @@ const METHODS: Record<string, string> = { transferencia: "Transferencia", deposi
 interface ExpenseLite { event_id: string; planned_amount: number; agreed_amount: number | null; paid_amount: number }
 
 export default function FinancePage() {
-  const { ws, region, readOnly } = useWorkspace();
+  const { ws, region, readOnly, modules } = useWorkspace();
+  const { data: cateringRows } = useCateringOrders(ws.id, modules.some((m) => m.module_key === "orders"));
+  const { data: tastingRows } = useTastings(ws.id, modules.some((m) => m.module_key === "tastings"));
   const { data: payments, isLoading } = usePayments(ws.id);
   const { data: quotes } = useQuotes(ws.id);
   const { data: events } = useEvents(ws.id);
@@ -63,12 +66,21 @@ export default function FinancePage() {
   const deals = useMemo(() => [
     ...(quotes ?? []).filter((q) => q.status === "accepted" && !rentedQuotes.has(q.id)).map((q) => ({
       event_id: q.event_id, currency_code: q.currency_code, date: (q.accepted_at ?? q.issue_date).slice(0, 10),
-      net: Number(q.subtotal) - Math.min(Number(q.discount_amount), Number(q.subtotal)), cost: Number(q.cost_total ?? 0), gross: Number(q.total), retained: 0 })),
+      net: Number(q.subtotal) - Math.min(Number(q.discount_amount), Number(q.subtotal)),
+      // Costo: el mayor entre lo estimado en la cotización y lo que de verdad se compró en sus pedidos de catering
+      cost: Math.max(Number(q.cost_total ?? 0), (cateringRows ?? []).filter((o) => o.quote_id === q.id && o.status !== "canceled").reduce((t, o) => t + Number(o.cost_actual), 0)),
+      gross: Number(q.total), retained: 0 })),
     ...(rentalRows ?? []).map((r) => ({ event_id: r.event_id, currency_code: r.currency_code, date: r.starts_at.slice(0, 10),
       net: Number(r.subtotal) - Math.min(Number(r.discount_amount), Number(r.subtotal)) + Number(r.damage_total), cost: 0, gross: Number(r.total) + Number(r.damage_total), retained: Number(r.deposit_retained) })),
     ...(bookingRows ?? []).filter((b) => b.kind === "event" && (b.status === "confirmed" || b.status === "done")).map((b) => ({ event_id: b.event_id, currency_code: b.currency_code, date: b.starts_at.slice(0, 10),
       net: Number(b.subtotal) - Math.min(Number(b.discount_amount), Number(b.subtotal)), cost: Number(b.cost_total ?? 0), gross: Number(b.total), retained: Number(b.deposit_retained) })),
-  ], [quotes, rentalRows, bookingRows]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Pedidos de catering sin cotización y degustaciones cobradas
+    ...(cateringRows ?? []).filter((o) => !o.quote_id && ["confirmed", "production", "delivered"].includes(o.status)).map((o) => ({ event_id: o.event_id, currency_code: o.currency_code,
+      date: new Date(o.service_at).toISOString().slice(0, 10), net: Number(o.subtotal) - Math.min(Number(o.discount_amount), Number(o.subtotal)),
+      cost: Math.max(Number(o.cost_estimated), Number(o.cost_actual)), gross: Number(o.total), retained: 0 })),
+    ...(tastingRows ?? []).filter((t) => t.status === "done" && Number(t.price) > 0).map((t) => ({ event_id: null as string | null, currency_code: t.currency_code,
+      date: new Date(t.scheduled_at).toISOString().slice(0, 10), net: Number(t.price), cost: 0, gross: Number(t.price), retained: 0 })),
+  ], [quotes, rentalRows, bookingRows, cateringRows, tastingRows]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Abrir en la moneda donde hay movimientos (si todo está en dólares, no mostrar córdobas en cero)
   useEffect(() => {

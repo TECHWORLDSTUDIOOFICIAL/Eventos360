@@ -2,7 +2,7 @@ import {
   Armchair, BadgeDollarSign, BarChart3, Boxes, Building2, CalendarDays, CalendarRange, Camera, ChefHat,
   ClipboardCheck, ClipboardList, Contact, FileSignature, FileText, Hammer, Heart, Home, Image, LayoutDashboard,
   ListChecks, Mail, Package, PartyPopper, Receipt, RotateCcw, Sparkles, Truck, UserCog, Users, UtensilsCrossed,
-  Wallet, Wrench, type LucideIcon, CalendarCheck, Clock, Tag, Carrot, Store,
+  Wallet, Wrench, type LucideIcon, CalendarCheck, Clock, Tag, Carrot, CookingPot, Store,
 } from "lucide-react";
 
 /**
@@ -55,9 +55,10 @@ export const MODULES: Record<string, ModuleMeta> = {
   venue_rates: m(Receipt, "Tarifas por día y temporada, hora extra y garantía.", null),
   bookings: m(CalendarCheck, "Consultas, apartados y reservas de tus espacios, sin dobles reservas.", null),
   venue_calendar: m(CalendarDays, "Ocupación de cada espacio día por día.", null),
-  menus: m(UtensilsCrossed, "Menús y precios por persona.", 8),
-  orders: m(ClipboardList, "Pedidos y producción.", 8),
-  ingredients: m(Carrot, "Ingredientes, recetas y costo de preparación.", 8),
+  menus: m(UtensilsCrossed, "Menús por persona con costo real, opciones y precios por volumen.", 9),
+  orders: m(ClipboardList, "Pedidos de catering: invitados, hoja de cocina, compras y lista de compras.", 9),
+  ingredients: m(Carrot, "Ingredientes con unidades y merma; recetas con costo por porción.", 9),
+  tastings: m(CookingPot, "Degustaciones: pruebas de menú con tus clientes.", 9),
   workforce: m(Users, "Tu personal de eventos: puestos, tarifas, disponibilidad y pagos.", 7),
   shifts: m(Clock, "Turnos por evento: quién va, a qué hora, confirmación por WhatsApp y asistencia.", 7),
   sessions: m(Camera, "Sesiones y pruebas agendadas.", 8),
@@ -75,7 +76,7 @@ const IMPLEMENTED: Record<string, string[]> = {
   personal: ["home", "my_event", "guests", "invitations", "budget", "suppliers", "seating", "schedule", "tasks", "inspiration", "reports"],
   professional: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget", "catalog", "packages", "workforce", "shifts", "reports"],
   business: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget", "catalog", "packages", "workforce", "shifts", "reports",
-    "inventory", "reservations", "availability", "deliveries", "returns", "maintenance", "team", "venues", "venue_rates", "bookings", "venue_calendar"],
+    "inventory", "reservations", "availability", "deliveries", "returns", "maintenance", "team", "venues", "venue_rates", "bookings", "venue_calendar", "menus", "orders", "ingredients", "tastings"],
 };
 
 export function moduleMeta(key: string, kind?: string): ModuleMeta {
@@ -98,7 +99,7 @@ export const featureReady = (key: string, kind?: string) => !!FEATURE_AVAILABLE[
 
 /** Secciones del menú (Profesional y Business) para que sea fácil encontrar cada herramienta. */
 export const NAV_GROUPS: { title: string; keys: string[] }[] = [
-  { title: "Operación", keys: ["bookings", "venue_calendar", "reservations", "deliveries", "returns", "availability", "events", "calendar", "tasks", "schedule", "guests", "seating", "invitations", "installations", "orders", "sessions", "shifts", "menus"] },
+  { title: "Operación", keys: ["bookings", "venue_calendar", "reservations", "deliveries", "returns", "availability", "events", "calendar", "tasks", "schedule", "guests", "seating", "invitations", "installations", "orders", "tastings", "sessions", "shifts", "menus"] },
   { title: "Espacios", keys: ["venues", "venue_rates"] },
   { title: "Ventas", keys: ["customers", "catalog", "packages", "quotes", "contracts"] },
   { title: "Inventario", keys: ["inventory", "maintenance", "ingredients", "deliverables", "portfolio"] },
