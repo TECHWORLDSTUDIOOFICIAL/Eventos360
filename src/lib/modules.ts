@@ -58,8 +58,8 @@ export const MODULES: Record<string, ModuleMeta> = {
   menus: m(UtensilsCrossed, "Menús y precios por persona.", 8),
   orders: m(ClipboardList, "Pedidos y producción.", 8),
   ingredients: m(Carrot, "Ingredientes, recetas y costo de preparación.", 8),
-  workforce: m(Users, "Personal, disponibilidad y tarifas.", 8),
-  shifts: m(Clock, "Asignación de personal a eventos, horarios y asistencia.", 8),
+  workforce: m(Users, "Tu personal de eventos: puestos, tarifas, disponibilidad y pagos.", 7),
+  shifts: m(Clock, "Turnos por evento: quién va, a qué hora, confirmación por WhatsApp y asistencia.", 7),
   sessions: m(Camera, "Sesiones y pruebas agendadas.", 8),
   deliverables: m(Image, "Entregables y galerías para clientes.", 8),
   portfolio: m(Sparkles, "Galería de trabajos realizados.", 8),
@@ -73,8 +73,8 @@ export const SPECIALTY_ICONS: Record<string, LucideIcon> = {
 /** Módulos ya implementados por modalidad (el resto indica su etapa). */
 const IMPLEMENTED: Record<string, string[]> = {
   personal: ["home", "my_event", "guests", "invitations", "budget", "suppliers", "seating", "schedule", "tasks", "inspiration"],
-  professional: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget", "catalog", "packages"],
-  business: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget", "catalog", "packages",
+  professional: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget", "catalog", "packages", "workforce", "shifts"],
+  business: ["dashboard", "customers", "events", "quotes", "contracts", "calendar", "finance", "suppliers", "tasks", "guests", "invitations", "seating", "schedule", "budget", "catalog", "packages", "workforce", "shifts",
     "inventory", "reservations", "availability", "deliveries", "returns", "maintenance", "team", "venues", "venue_rates", "bookings", "venue_calendar"],
 };
 

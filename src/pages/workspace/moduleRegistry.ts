@@ -27,6 +27,8 @@ export const MODULE_PAGES: Partial<Record<WorkspaceKind, Record<string, Page>>> 
     tasks: lazy(() => import("@/pages/pro/ProTasksPage")),
     catalog: lazy(() => import("@/pages/catalog/CatalogPage")),
     packages: lazy(() => import("@/pages/catalog/PackagesPage")),
+    workforce: lazy(() => import("@/pages/staff/WorkforcePage")),
+    shifts: lazy(() => import("@/pages/staff/ShiftsPage")),
   },
   business: {
     // Comunes con Profesional
@@ -40,6 +42,8 @@ export const MODULE_PAGES: Partial<Record<WorkspaceKind, Record<string, Page>>> 
     tasks: lazy(() => import("@/pages/pro/ProTasksPage")),
     catalog: lazy(() => import("@/pages/catalog/CatalogPage")),
     packages: lazy(() => import("@/pages/catalog/PackagesPage")),
+    workforce: lazy(() => import("@/pages/staff/WorkforcePage")),
+    shifts: lazy(() => import("@/pages/staff/ShiftsPage")),
     // Alquiler e inventario
     inventory: lazy(() => import("@/pages/business/InventoryPage")),
     reservations: lazy(() => import("@/pages/business/RentalsPage")),

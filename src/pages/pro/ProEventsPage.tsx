@@ -16,6 +16,7 @@ import { Tasks } from "@/pages/personal/TasksPage";
 import { Budget } from "@/pages/personal/BudgetPage";
 import { Alert, Badge, Button, Card, CardHeader, Dialog, EmptyState, Field, Input, PageHeader, Select, Spinner, Textarea, cx } from "@/components/ui";
 import { CustomerSelect } from "@/components/QuickCreate";
+import { counts, useAssignments, useShifts } from "@/lib/staff";
 
 const STATUS: Record<EventRow["status"], { label: string; tone: "info" | "ok" | "neutral" | "danger" }> = {
   planning: { label: "En organización", tone: "info" }, confirmed: { label: "Confirmado", tone: "ok" },
@@ -249,8 +250,15 @@ function EventDetail({ id }: { id: string }) {
 
 /** Resumen financiero y comercial del evento: contratado, cobrado, costos y ganancia. */
 function EventSummary({ event }: { event: EventRow }) {
-  const { ws, region, readOnly } = useWorkspace();
+  const { ws, region, readOnly, modules } = useWorkspace();
+  const hasShifts = modules.some((m) => m.module_key === "shifts");
   const { data: s } = useEventSummary(event.id);
+  const { data: evShifts } = useShifts(ws.id, { eventId: event.id });
+  const { data: allAssign } = useAssignments(ws.id);
+  const evAssign = (allAssign ?? []).filter((a) => evShifts?.some((x) => x.id === a.shift_id));
+  const staffCost = evAssign.filter((a) => a.currency_code === event.currency_code).reduce((t, a) => t + Number(a.pay_amount), 0);
+  const staffNeeded = (evShifts ?? []).reduce((t, x) => t + x.needed, 0);
+  const staffFilled = evAssign.filter((a) => counts(a.status)).length;
   const { data: quotes } = useQuotes(ws.id, { eventId: event.id });
   const { data: contracts } = useContracts(ws.id, { eventId: event.id });
   const { data: payments } = usePayments(ws.id, { eventId: event.id });
@@ -260,7 +268,7 @@ function EventSummary({ event }: { event: EventRow }) {
   const money = (n: number, c = cur) => formatMoney(n, c, region.locale);
   const contracted = accepted.reduce((a, q) => a + Number(q.total), 0);
   const received = (payments ?? []).reduce((a, p) => a + Number(p.amount), 0);
-  const costs = s?.committed_total ?? 0;
+  const costs = (s?.committed_total ?? 0) + staffCost;
   // Costos (moneda del evento) y contratado (moneda de la cotización) solo se restan si es la misma moneda.
   const sameCurrency = cur === event.currency_code || costs === 0;
   const profit = sameCurrency ? contracted - costs : null;
@@ -272,7 +280,7 @@ function EventSummary({ event }: { event: EventRow }) {
         {[
           { l: "Contratado", v: money(contracted), h: plural(accepted.length, "cotización aceptada", "cotizaciones aceptadas") },
           { l: "Cobrado", v: money(received), h: contracted ? `Saldo ${money(Math.max(0, contracted - received))}` : "Registra pagos en Finanzas" },
-          { l: "Costos", v: money(costs, event.currency_code), h: `Pagado a proveedores ${money(s?.paid_total ?? 0, event.currency_code)}` },
+          { l: "Costos", v: money(costs, event.currency_code), h: staffCost > 0 ? `Incluye personal ${money(staffCost, event.currency_code)}` : `Pagado a proveedores ${money(s?.paid_total ?? 0, event.currency_code)}` },
           { l: "Ganancia estimada", v: profit === null ? "—" : money(profit), h: profit === null ? "Monedas distintas: no se puede calcular" : margin === null ? "Sin monto contratado" : `Margen ${margin}%`, warn: profit !== null && profit < 0 },
         ].map((x) => (
           <Card key={x.l} className="p-4">
@@ -315,6 +323,23 @@ function EventSummary({ event }: { event: EventRow }) {
           </div>
         </Card>
       </div>
+      {hasShifts && (
+        <Card>
+          <CardHeader title="Personal del evento" description={evShifts?.length ? `${staffFilled} de ${staffNeeded} puestos cubiertos` : "Meseros, montaje, choferes… con horario y pago."}
+            action={!readOnly && <Link to={base(`m/shifts?evento=${event.id}`)} className="text-sm font-semibold text-[var(--accent)]">+ Turno</Link>} />
+          {!evShifts?.length ? <p className="px-5 pb-5 text-sm text-muted">Sin turnos. Crea los turnos que necesitas y asigna a tu personal.</p> : (
+            <ul className="divide-y divide-line">{evShifts.map((x) => {
+              const f = evAssign.filter((a) => a.shift_id === x.id && counts(a.status)).length;
+              return (
+                <li key={x.id}><Link to={base(`m/shifts/${x.id}`)} className="flex items-center justify-between gap-2 px-5 py-3 text-sm hover:bg-paper">
+                  <span>{x.position} · <span className="text-muted">{new Intl.DateTimeFormat(region.locale, { timeZone: region.timezone, weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(new Date(x.starts_at))}</span></span>
+                  <Badge tone={f >= x.needed ? "ok" : f === 0 ? "danger" : "warn"}>{f} de {x.needed}</Badge>
+                </Link></li>
+              );
+            })}</ul>
+          )}
+        </Card>
+      )}
       {!event.customer_id && <div className="flex items-center gap-2 text-sm text-warn"><AlertTriangle className="size-4" />Asigna un cliente al evento para crear cotizaciones y contratos.</div>}
     </div>
   );
