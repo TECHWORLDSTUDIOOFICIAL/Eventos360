@@ -7,6 +7,7 @@ import { useWorkspace } from "@/layouts/WorkspaceShell";
 import { Alert, Button, Card, CardHeader, Field, Input, PageHeader, Select, Spinner } from "@/components/ui";
 import NotFound from "@/pages/NotFound";
 import BusinessProfileCard from "./BusinessProfileCard";
+import { CateringSettingsCard, OptionalModulesCard } from "./OptionalModulesCard";
 
 interface WsRow { id: string; name: string; currency_code: string; timezone: string; locale: string; tax_rate: number; country_code: string }
 
@@ -20,7 +21,7 @@ const LOCALES = [{ v: "es-NI", l: "Español (Nicaragua)" }, { v: "es-CR", l: "Es
   { v: "es-MX", l: "Español (México)" }, { v: "es-CO", l: "Español (Colombia)" }, { v: "es-ES", l: "Español (España)" }, { v: "en-US", l: "English (US)" }];
 
 export default function WorkspaceSettings() {
-  const { ws, canManage, readOnly } = useWorkspace();
+  const { ws, canManage, readOnly, modules } = useWorkspace();
   const qc = useQueryClient();
   const row = useQuery({
     queryKey: ["ws-row", ws.id],
@@ -100,6 +101,8 @@ export default function WorkspaceSettings() {
         </form>
       </Card>
       {ws.kind !== "personal" && <BusinessProfileCard />}
+      {modules.some((m) => m.module_key === "orders") && <CateringSettingsCard />}
+      {ws.kind === "business" && <OptionalModulesCard />}
     </div>
   );
 }

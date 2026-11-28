@@ -60,6 +60,11 @@ export const MODULE_PAGES: Partial<Record<WorkspaceKind, Record<string, Page>>> 
     venue_rates: lazy(() => import("@/pages/venues/RatesPage")),
     bookings: lazy(() => import("@/pages/venues/BookingsPage")),
     venue_calendar: lazy(() => import("@/pages/venues/OccupancyPage")),
+    // Catering
+    menus: lazy(() => import("@/pages/catering/MenusPage")),
+    orders: lazy(() => import("@/pages/catering/OrdersPage")),
+    ingredients: lazy(() => import("@/pages/catering/IngredientsPage")),
+    tastings: lazy(() => import("@/pages/catering/TastingsPage")),
   },
 };
 
